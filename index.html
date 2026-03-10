@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slotomania CORS Verifier</title>
+    <title>CORS</title>
     <style>
         :root {
             --bg: #0d1117;
@@ -670,6 +670,11 @@
             updateExportState();
         }
 
+        function clearVisualResults() {
+            summaryEl.innerHTML = "";
+            resultsEl.innerHTML = '<div class="empty">No checks have been run yet.</div>';
+        }
+
         function maskString(value) {
             if (typeof value !== "string") {
                 return value;
@@ -1016,9 +1021,6 @@
         }
 
         async function runTests(tests) {
-            clearResults();
-            setBusy(true);
-
             const activeTests = tests.filter((test) => {
                 if (test.needsRefreshToken && !refreshTokenEl.value.trim()) {
                     return false;
@@ -1033,13 +1035,15 @@
                 summaryEl.innerHTML = `
                     <div class="summary-card">
                         <strong>No runnable tests</strong>
-                        <div class="small">Provide the required headers or token inputs for the selected mode.</div>
+                        <div class="small">Provide the required headers or token inputs for the selected mode. Existing exportable evidence was preserved.</div>
                     </div>
                 `;
-                resultsEl.innerHTML = '<div class="empty">Nothing ran. Fill in the required values and try again.</div>';
-                setBusy(false);
+                resultsEl.innerHTML = '<div class="empty">Nothing ran. Fill in the required values and try again. If you want chain evidence, paste your refresh token and run the chain.</div>';
                 return;
             }
+
+            clearVisualResults();
+            setBusy(true);
 
             const items = [];
             for (const test of activeTests) {
@@ -1055,21 +1059,20 @@
         }
 
         async function runRefreshChain() {
-            clearResults();
-            setBusy(true);
-
             const refreshToken = refreshTokenEl.value.trim();
             if (!refreshToken) {
                 summaryEl.innerHTML = `
                     <div class="summary-card">
                         <strong>Refresh token required</strong>
-                        <div class="small">Paste your own long refresh JWT to run the confirmed cross-origin auth chain.</div>
+                        <div class="small">Paste your own long refresh JWT to run the confirmed cross-origin auth chain. Existing exportable evidence was preserved.</div>
                     </div>
                 `;
                 resultsEl.innerHTML = '<div class="empty">Nothing ran. A valid refresh token is required for the chain.</div>';
-                setBusy(false);
                 return;
             }
+
+            clearVisualResults();
+            setBusy(true);
 
             const refreshBody = {
                 clientType: "Slotomania.com-ONE",
