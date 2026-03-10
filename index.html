@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -339,12 +340,13 @@
         }
     </style>
 </head>
+
 <body>
     <div class="shell">
         <section class="hero">
             <div class="badge">Authorized own-account verifier</div>
             <div>
-                <h1>Slotomania CORS verifier</h1>
+                <h1>CORS verifier</h1>
                 <p>
                     This page validates whether Slotomania endpoints are readable cross-origin from your hosted GitHub
                     Pages origin. It keeps everything local in this tab and is intended for your own authorized test
@@ -363,7 +365,8 @@
                 </div>
                 <div class="meta-card">
                     <div class="meta-label">Verification goal</div>
-                    <div class="meta-value">Readable auth material, profile fields, inbox data, or other PII indicators</div>
+                    <div class="meta-value">Readable auth material, profile fields, inbox data, or other PII indicators
+                    </div>
                 </div>
             </div>
         </section>
@@ -374,16 +377,19 @@
                 <div class="field">
                     <label for="sessionId">Session_id header</label>
                     <input id="sessionId" type="text" placeholder="Optional. Paste your own Session_id here">
-                    <div class="field-note">Needed for the manual-header checks on many authenticated GET endpoints.</div>
+                    <div class="field-note">Needed for the manual-header checks on many authenticated GET endpoints.
+                    </div>
                 </div>
                 <div class="field">
                     <label for="sessionToken">Sessiontoken header</label>
                     <textarea id="sessionToken" placeholder="Optional. Paste your own Sessiontoken JWT here"></textarea>
-                    <div class="field-note">Use only your own token. This page never transmits results anywhere except the target endpoint you are testing.</div>
+                    <div class="field-note">Use only your own token. This page never transmits results anywhere except
+                        the target endpoint you are testing.</div>
                 </div>
                 <div class="field">
                     <label for="refreshToken">Refresh token body value</label>
-                    <textarea id="refreshToken" placeholder="Optional. Paste the long refreshToken JWT used by /sm/login-service/v2/refresh"></textarea>
+                    <textarea id="refreshToken"
+                        placeholder="Optional. Paste the long refreshToken JWT used by /sm/login-service/v2/refresh"></textarea>
                     <div class="field-note">This enables the refresh-flow test for cross-origin token issuance.</div>
                 </div>
             </div>
@@ -400,6 +406,7 @@
             </div>
 
             <div class="actions">
+                <button class="primary" id="chainBtn">Run refresh-token chain</button>
                 <button class="primary" id="cookieBtn">Run cookie-only checks</button>
                 <button class="secondary" id="manualBtn">Run manual-token checks</button>
                 <button class="ghost" id="clearBtn">Clear results</button>
@@ -415,6 +422,10 @@
                 includes auth artifacts, account identifiers, email-like fields, chat-like fields, or profile data from
                 your own account.
             </div>
+            <div class="help">
+                If you only see <code>resultCode: -1104</code>, the request reached the API but did not have a fresh
+                valid app-auth context. The refresh-token chain below is the path that has been confirmed to work.
+            </div>
             <div class="result-grid" id="results">
                 <div class="empty">No checks have been run yet.</div>
             </div>
@@ -425,6 +436,7 @@
         const currentOriginEl = document.getElementById("currentOrigin");
         const summaryEl = document.getElementById("summary");
         const resultsEl = document.getElementById("results");
+        const chainBtn = document.getElementById("chainBtn");
         const cookieBtn = document.getElementById("cookieBtn");
         const manualBtn = document.getElementById("manualBtn");
         const clearBtn = document.getElementById("clearBtn");
@@ -528,6 +540,42 @@
             }
         ];
 
+        const CHAIN_TESTS = [
+            {
+                id: "profile-chain",
+                title: "Profile with fresh session",
+                method: "GET",
+                url: "https://play.slotomania.com/user-profile/v2/public/profile"
+            },
+            {
+                id: "auth-token-chain",
+                title: "User service auth token",
+                method: "POST",
+                url: "https://play.slotomania.com/sm/client-api/ClientApi/userservice/getSessionToken.do",
+                buildBody() {
+                    return {};
+                }
+            },
+            {
+                id: "inapps-chain",
+                title: "Inbox / in-apps with fresh session",
+                method: "GET",
+                url: "https://play.slotomania.com/sm/inapps/"
+            },
+            {
+                id: "tutorials-chain",
+                title: "Tutorial state with fresh session",
+                method: "GET",
+                url: "https://play.slotomania.com/tutorial-api/tutorials"
+            },
+            {
+                id: "payment-pages-chain",
+                title: "Payment page template with fresh session",
+                method: "GET",
+                url: "https://play.slotomania.com/payment-page-template/client/getPaymentPages"
+            }
+        ];
+
         const PII_PATTERNS = [
             /email/i,
             /full.?name/i,
@@ -549,11 +597,16 @@
             /session/i,
             /auth/i,
             /jwt/i,
+            /credential/i,
+            /userid/i,
+            /username/i,
+            /reference/i,
             /userreferenceid/i,
             /ocid/i
         ];
 
         function setBusy(busy) {
+            chainBtn.disabled = busy;
             cookieBtn.disabled = busy;
             manualBtn.disabled = busy;
         }
@@ -656,18 +709,32 @@
             return headers;
         }
 
+        function decodeJwtPayload(token) {
+            const parts = token.split(".");
+            if (parts.length < 2) {
+                throw new Error("JWT payload not found");
+            }
+
+            const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+            const padded = payload + "=".repeat((4 - (payload.length % 4 || 4)) % 4);
+            return JSON.parse(atob(padded));
+        }
+
         async function runFetch(test, options = {}) {
-            const headers = buildHeaders(test);
+            const headers = options.overrideHeaders || buildHeaders(test);
             const init = {
                 method: test.method,
                 mode: "cors",
                 cache: "no-store",
-                credentials: useCookiesEl.checked ? "include" : "omit",
+                credentials: options.overrideCredentials || (useCookiesEl.checked ? "include" : "omit"),
                 headers
             };
 
             if (test.method === "POST") {
-                init.body = JSON.stringify(test.buildBody ? test.buildBody() : {});
+                const bodyValue = options.overrideBody !== undefined
+                    ? options.overrideBody
+                    : JSON.stringify(test.buildBody ? test.buildBody() : {});
+                init.body = typeof bodyValue === "string" ? bodyValue : JSON.stringify(bodyValue);
             }
 
             const startedAt = performance.now();
@@ -832,9 +899,164 @@
             setBusy(false);
         }
 
+        async function runRefreshChain() {
+            clearResults();
+            setBusy(true);
+
+            const refreshToken = refreshTokenEl.value.trim();
+            if (!refreshToken) {
+                summaryEl.innerHTML = `
+                    <div class="summary-card">
+                        <strong>Refresh token required</strong>
+                        <div class="small">Paste your own long refresh JWT to run the confirmed cross-origin auth chain.</div>
+                    </div>
+                `;
+                resultsEl.innerHTML = '<div class="empty">Nothing ran. A valid refresh token is required for the chain.</div>';
+                setBusy(false);
+                return;
+            }
+
+            const refreshBody = {
+                clientType: "Slotomania.com-ONE",
+                clientVersion: "77.153.02",
+                clientLanguage: "en",
+                refreshToken,
+                timeZone: "UTC-4",
+                platformType: "html5",
+                containerType: "web",
+                marketType: "pras"
+            };
+
+            let refreshResponse;
+            let refreshText = "";
+            let refreshJson = null;
+            const refreshStartedAt = performance.now();
+
+            try {
+                refreshResponse = await fetch(MANUAL_TESTS[0].url, {
+                    method: "POST",
+                    mode: "cors",
+                    cache: "no-store",
+                    credentials: "omit",
+                    headers: new Headers({ "Content-Type": "application/json" }),
+                    body: JSON.stringify(refreshBody)
+                });
+                refreshText = await refreshResponse.text();
+                try {
+                    refreshJson = refreshText ? JSON.parse(refreshText) : null;
+                } catch (error) {
+                    refreshJson = null;
+                }
+            } catch (error) {
+                const failedRefresh = {
+                    title: "Refresh flow token issuance",
+                    url: MANUAL_TESTS[0].url,
+                    status: "ERR",
+                    statusText: error.message,
+                    elapsedMs: Math.round(performance.now() - refreshStartedAt),
+                    ok: false,
+                    piiPaths: [],
+                    authPaths: [],
+                    contentType: "",
+                    preview: `Fetch failed: ${error.message}`,
+                    rawLength: 0
+                };
+                renderSummary([failedRefresh]);
+                renderResults([failedRefresh]);
+                setBusy(false);
+                return;
+            }
+
+            const refreshSignals = refreshJson ? extractSignals(refreshJson) : { pii: [], auth: [] };
+            const refreshResult = {
+                title: "Refresh flow token issuance",
+                url: MANUAL_TESTS[0].url,
+                status: refreshResponse.status,
+                statusText: refreshResponse.statusText,
+                elapsedMs: Math.round(performance.now() - refreshStartedAt),
+                ok: refreshResponse.ok,
+                piiPaths: [...new Set(refreshSignals.pii)].slice(0, 10),
+                authPaths: [...new Set(refreshSignals.auth)].slice(0, 12),
+                contentType: refreshResponse.headers.get("content-type") || "",
+                preview: refreshJson ? JSON.stringify(sanitizePayload(refreshJson), null, 2) : refreshText.slice(0, 2000),
+                rawLength: refreshText.length
+            };
+
+            const items = [refreshResult];
+
+            if (!refreshResult.ok) {
+                renderSummary(items);
+                renderResults(items);
+                setBusy(false);
+                return;
+            }
+
+            let sessionToken;
+            let sessionId;
+            let jwtPayload = null;
+
+            sessionToken = refreshJson && refreshJson.sessionToken;
+            if (!sessionToken) {
+                renderSummary(items);
+                renderResults(items);
+                setBusy(false);
+                return;
+            }
+
+            try {
+                jwtPayload = decodeJwtPayload(sessionToken);
+                sessionId = jwtPayload.sessionId;
+            } catch (error) {
+                sessionId = "";
+            }
+
+            const freshHeaders = new Headers();
+            if (sessionId) {
+                freshHeaders.set("Session_id", sessionId);
+            }
+            freshHeaders.set("Sessiontoken", sessionToken);
+
+            for (const test of CHAIN_TESTS) {
+                items.push(await runFetch(test, {
+                    overrideHeaders: freshHeaders,
+                    overrideCredentials: "omit"
+                }));
+            }
+
+            const chainSummary = [
+                {
+                    title: "Refresh chain",
+                    ok: true,
+                    status: "OK",
+                    statusText: "Fresh session established",
+                    elapsedMs: 0,
+                    contentType: "application/json",
+                    rawLength: 0,
+                    piiPaths: [],
+                    authPaths: [
+                        "$.sessionToken",
+                        "$.refreshToken",
+                        "$.userReferenceId",
+                        sessionId ? "$.decoded.sessionId" : ""
+                    ].filter(Boolean),
+                    url: "Client-side decoded chain context",
+                    preview: JSON.stringify(sanitizePayload({
+                        refreshResponse: refreshJson,
+                        decodedSessionToken: jwtPayload
+                    }), null, 2)
+                }
+            ];
+
+            renderSummary([...chainSummary, ...items]);
+            renderResults([...chainSummary, ...items]);
+            setBusy(false);
+        }
+
+        chainBtn.addEventListener("click", runRefreshChain);
         cookieBtn.addEventListener("click", () => runTests(COOKIE_TESTS));
         manualBtn.addEventListener("click", () => runTests(MANUAL_TESTS));
         clearBtn.addEventListener("click", clearResults);
     </script>
 </body>
+
 </html>
