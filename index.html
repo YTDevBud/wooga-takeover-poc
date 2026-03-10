@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORS</title>
+    <title>Slotomania CORS Verifier</title>
     <style>
         :root {
             --bg: #0d1117;
@@ -506,25 +506,6 @@
         ];
 
         const MANUAL_TESTS = [
-            {
-                id: "refresh",
-                title: "Refresh flow token issuance",
-                method: "POST",
-                url: "https://play.slotomania.com/sm/login-service/v2/refresh",
-                buildBody() {
-                    return {
-                        clientType: "Slotomania.com-ONE",
-                        clientVersion: "77.153.02",
-                        clientLanguage: "en",
-                        refreshToken: refreshTokenEl.value.trim(),
-                        timeZone: "UTC-4",
-                        platformType: "html5",
-                        containerType: "web",
-                        marketType: "pras"
-                    };
-                },
-                needsRefreshToken: true
-            },
             {
                 id: "session-auth-token",
                 title: "User service auth token",
@@ -1035,10 +1016,10 @@
                 summaryEl.innerHTML = `
                     <div class="summary-card">
                         <strong>No runnable tests</strong>
-                        <div class="small">Provide the required headers or token inputs for the selected mode. Existing exportable evidence was preserved.</div>
+                        <div class="small">Provide the required headers or token inputs for the selected mode. Manual mode requires both <code>Session_id</code> and <code>Sessiontoken</code>. Existing exportable evidence was preserved.</div>
                     </div>
                 `;
-                resultsEl.innerHTML = '<div class="empty">Nothing ran. Fill in the required values and try again. If you want chain evidence, paste your refresh token and run the chain.</div>';
+                resultsEl.innerHTML = '<div class="empty">Nothing ran. Manual mode needs <code>Session_id</code> and <code>Sessiontoken</code>. If you only have a refresh token and want chain evidence, use <code>Run refresh-token chain</code>.</div>';
                 return;
             }
 
